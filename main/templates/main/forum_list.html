@@ -1,0 +1,24 @@
+<!-- forum_list.html -->
+{% extends 'base.html' %}
+{% block content %}
+<div class="forum-container">
+    <h1>Форумы</h1>
+    <div class="forum-list">
+        {% for forum in forums %}
+        <div class="forum-card">
+            <div class="forum-info">
+                <h2><a href="{% url 'topic_list' forum.id %}">{{ forum.name }}</a></h2>
+                <p>{{ forum.description }}</p>
+            </div>
+            <div class="forum-stats">
+                <span>Тем: {{ forum.topics.count }}</span>
+                <span>Постов: {{ forum.posts_count }}</span>
+                {% if forum.last_post %}
+                <span>Последний пост: {{ forum.last_post.author.username }} в {{ forum.last_post.created_at|date:"d.m.Y H:i" }}</span>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

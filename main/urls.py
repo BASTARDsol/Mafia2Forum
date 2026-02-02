@@ -25,7 +25,7 @@ urlpatterns = [
 
     # Тема
     path('topic/<int:id>/', views.topic_detail, name='topic-detail'),
-    path('topic/create/', views.topic_create_view, name='create-topic'),
+    path('topic/create/', views.create_topic_simple, name='create_topic_simple'),
 
     # Форум
     path('forum/', views.forum_home, name='forum'),
@@ -34,4 +34,6 @@ urlpatterns = [
     path('terms/', views.terms, name='terms'),
     path('privacy/', views.privacy, name='privacy'),
     path('topic/<int:id>/delete/', views.topic_delete_view, name='delete-topic'),
+    path('', views.forum_list, name='forum_list'),
+    path('topic/create/', views.create_topic_simple, name='create_topic_simple'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

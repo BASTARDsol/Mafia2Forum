@@ -1,7 +1,6 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm, PasswordChangeForm
 from .models import CustomUser, Profile, Topic, Post
-
 # ------------------------
 # Регистрация пользователя
 # ------------------------
@@ -97,7 +96,7 @@ class TopicCreateForm(forms.ModelForm):
 class PostCreateForm(forms.ModelForm):
     class Meta:
         model = Post
-        fields = ['content']
+        fields = ['content', 'image']
         labels = {
             'content': 'Сообщение',
         }

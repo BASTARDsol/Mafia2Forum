@@ -47,13 +47,23 @@ class Profile(models.Model):
             pass
         super(Profile, self).save(*args, **kwargs)
 
-# создаём профиль при создании пользователя
+# Создаём профиль при создании пользователя
 @receiver(post_save, sender=CustomUser)
 def create_or_save_user_profile(sender, instance, created, **kwargs):
     if created:
         Profile.objects.create(user=instance)
     else:
         instance.profile.save()
+
+# ------------------------
+# Форум (раздел форума)
+# ------------------------
+class Forum(models.Model):
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return self.name
 
 # ------------------------
 # Категория тем форума
@@ -68,18 +78,23 @@ class Category(models.Model):
 # Тема форума
 # ------------------------
 class Topic(models.Model):
-    CATEGORY_CHOICES = [
+    forum = models.ForeignKey(
+        Forum,
+        on_delete=models.CASCADE,
+        related_name='topics',
+        null=True,
+        blank=True
+    )
+    title = models.CharField(max_length=200)
+    description = models.TextField()
+    category = models.CharField(max_length=50, choices=[
         ('Главная', 'Главная'),
         ('Новости', 'Новости'),
         ('Ивенты', 'Ивенты'),
-    ]
-
-    title = models.CharField(max_length=200)
-    description = models.TextField()
-    category = models.CharField(max_length=50, choices=CATEGORY_CHOICES)
-    author = models.ForeignKey('CustomUser', on_delete=models.CASCADE)
+    ])
+    author = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
-    image = models.ImageField(upload_to='topic_images/', null=True, blank=True)  # Добавлено поле для изображения
+    image = models.ImageField(upload_to='topic_images/', null=True, blank=True)
 
     def __str__(self):
         return self.title
@@ -88,10 +103,15 @@ class Topic(models.Model):
 # Пост внутри темы
 # ------------------------
 class Post(models.Model):
-    topic = models.ForeignKey(Topic, on_delete=models.CASCADE, related_name='posts')  # Связь с моделью Topic
+    topic = models.ForeignKey(
+        Topic,
+        on_delete=models.CASCADE,
+        related_name='posts'  # <- это позволит делать topic.posts
+    )
     author = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
-    content = models.TextField()
+    content = models.TextField()  # заменил description на content для постов
+    image = models.ImageField(upload_to='posts/', blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"Post by {self.author.username} in {self.topic.title}"
+        return f"{self.author.username}: {self.content[:20]}"
