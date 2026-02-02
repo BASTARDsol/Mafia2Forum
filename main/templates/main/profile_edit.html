@@ -1,0 +1,81 @@
+{% extends 'main/base.html' %}
+{% load static %}
+
+{% block content %}
+<h2 class="page-title">Редактирование профиля</h2>
+
+<div class="profile-container" style="display:flex; gap: 40px; margin-top:20px;">
+
+    <!-- Левая колонка: Аватар и кнопки -->
+    <div class="profile-left" style="width:250px; text-align:center;">
+        {% if user.profile.avatar %}
+            <img src="{{ user.profile.avatar.url }}" alt="Avatar" style="width:200px; height:200px; border-radius:50%; object-fit:cover; border:2px solid #ccc;">
+        {% else %}
+            <img src="{% static 'default-avatar.png' %}" alt="Avatar" style="width:200px; height:200px; border-radius:50%; object-fit:cover; border:2px solid #ccc;">
+        {% endif %}
+
+        <div style="margin-top:15px;">
+            <a href="{% url 'profile' %}" class="btn" style="padding:10px 20px; background:#c19b2e; color:#0d0d10; border-radius:8px; text-decoration:none; display:block;">Назад к профилю</a>
+        </div>
+    </div>
+
+    <!-- Правая колонка: формы -->
+    <div class="profile-right" style="flex:1;">
+        <div class="card">
+            <h3>Информация пользователя</h3>
+            <form method="POST" enctype="multipart/form-data" style="max-width:600px;">
+                {% csrf_token %}
+                <!-- Информация пользователя -->
+                {{ u_form.as_p }}
+
+                <!-- Аватар -->
+                {{ p_form.as_p }}
+
+                <!-- Кнопка сохранить -->
+                <button type="submit" name="update_profile" style="margin-top:10px;">Сохранить изменения</button>
+            </form>
+        </div>
+
+        <div class="card" style="margin-top:20px;">
+            <h3>Смена пароля</h3>
+            <form method="POST" style="max-width:600px;">
+                {% csrf_token %}
+                {{ pass_form.as_p }}
+                <button type="submit" name="change_password" style="margin-top:10px;">Сменить пароль</button>
+            </form>
+        </div>
+    </div>
+
+</div>
+
+<style>
+    /* Ограничиваем ширину полей и убираем длинные надписи для загрузки файлов */
+    .profile-right input[type="text"],
+    .profile-right input[type="password"],
+    .profile-right input[type="file"] {
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    /* Прячем надписи типа "Currently: ..." для загрузки аватара */
+    input[type="file"]::-webkit-file-upload-button {
+        visibility: hidden;
+    }
+
+    input[type="file"]::before {
+        content: 'Выберите файл';
+        display: inline-block;
+        background: #d4af37;
+        color: #0d0d10;
+        padding: 8px 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        margin-right: 5px;
+    }
+
+    input[type="file"]:hover::before {
+        background: #c19b2e;
+    }
+</style>
+
+{% endblock %}

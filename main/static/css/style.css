@@ -1,0 +1,239 @@
+/* ==============================================
+   Основные настройки
+   ============================================== */
+body {
+    font-family: 'Open Sans', sans-serif;
+    background-color: #1a1a1a; /* темный фон форума */
+    color: #f0f0f0;
+    margin: 0;
+    padding: 0;
+}
+
+a {
+    color: #d4af37;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+h1, h2, h3, h4 {
+    font-family: 'Merriweather', serif;
+}
+
+/* ==============================================
+   Контейнер
+   ============================================== */
+.container {
+    width: 90%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px 0;
+}
+
+/* ==============================================
+   Header
+   ============================================== */
+header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+.header-container {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.header-left a, .header-right a {
+    margin-right: 15px;
+    font-weight: 600;
+}
+
+.header-left a:last-child, .header-right a:last-child {
+    margin-right: 0;
+}
+
+/* ==============================================
+   Карточки и блоки
+   ============================================== */
+.cards-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    justify-content: center;
+}
+
+.card {
+    background-color: #2a2a2a;
+    border-radius: 12px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    padding: 20px;
+    margin-bottom: 20px;
+    color: #f0f0f0;
+    width: 100%;
+    max-width: 700px;
+    box-sizing: border-box;
+}
+
+.card h2 {
+    margin-top: 0;
+}
+
+.card p {
+    margin-bottom: 10px;
+}
+
+/* ==============================================
+   Кнопки
+   ============================================== */
+.btn, .btn-primary {
+    display: inline-block;
+    background-color: #d4af37;
+    color: #1a1a1a;
+    font-weight: 600;
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    text-align: center;
+}
+
+.btn:hover, .btn-primary:hover {
+    background-color: #b8912f;
+}
+
+/* ==============================================
+   Формы
+   ============================================== */
+.form-group {
+    margin-bottom: 15px;
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group label {
+    margin-bottom: 5px;
+    font-weight: 600;
+}
+
+.form-control {
+    padding: 8px 10px;
+    border-radius: 6px;
+    border: 1px solid #555;
+    background-color: #1a1a1a;
+    color: #f0f0f0;
+    font-size: 14px;
+    box-sizing: border-box;
+    width: 100%;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #d4af37;
+}
+
+/* ==============================================
+   Поле описания с фиксированной высотой и скроллом
+   ============================================== */
+.description-scroll {
+    max-height: 150px;    /* фиксированная высота */
+    overflow-y: auto;     /* вертикальный скролл */
+    resize: none;         /* нельзя растягивать вручную */
+}
+
+/* ==============================================
+   Списки ошибок
+   ============================================== */
+.errorlist {
+    margin: 5px 0 0 0;
+    padding: 0;
+    list-style: none;
+    color: #ff6b6b;
+    font-size: 13px;
+}
+
+.errorlist li {
+    margin-bottom: 3px;
+}
+
+/* ==============================================
+   Footer
+   ============================================== */
+footer {
+    text-align: center;
+    margin-top: 40px;
+    padding: 15px 0;
+    border-top: 1px solid #555;
+    color: #aaa;
+    font-size: 14px;
+}
+
+/* ==============================================
+   Адаптив
+   ============================================== */
+@media (max-width: 768px) {
+    .cards-container {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .header-container {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .header-left, .header-right {
+        margin-bottom: 10px;
+    }
+
+    .avatar {
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    object-fit: cover;
+    vertical-align: middle;
+    margin-right: 10px;
+    }
+
+    .topic-card .avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    margin-right: 8px; /* Расстояние между аватаром и ником */
+}
+
+/* Стиль для выравнивания элементов */
+.topic-card .author-info {
+    display: flex;
+    align-items: center;
+    font-size: 14px;
+    color: #777;
+}
+
+.btn-primary {
+    background-color: #d4af37;
+    color: #0d0d10;
+    padding: 8px 15px;
+    border-radius: 6px;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.btn-primary:hover {
+    background-color: #c19b2e;
+}
+
+/* Стиль для аватара */
+.avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    margin-right: 8px;
+}
+
+}

@@ -1,0 +1,103 @@
+{% extends "main/base.html" %}
+{% load widget_tweaks %}
+
+{% block content %}
+<div class="topic-detail-container">
+
+    <!-- Заголовок темы -->
+    <h2 class="page-title">{{ topic.title }}</h2>
+
+    <!-- Изображение темы -->
+    {% if topic.image %}
+        <div class="topic-image" style="margin-bottom: 20px;">
+            <img src="{{ topic.image.url }}" alt="Изображение темы" style="max-width: 100%; border-radius: 8px;">
+        </div>
+    {% else %}
+        <p>Изображение темы не загружено.</p>
+    {% endif %}
+
+    <!-- Автор темы -->
+    <div class="topic-author" style="margin-bottom: 20px; padding: 15px; background: #1c1c22; border-radius: 8px;">
+        <div class="author-info" style="display: flex; align-items: center;">
+            {% if topic.author.profile.avatar %}
+                <img src="{{ topic.author.profile.avatar.url }}" alt="Avatar" class="avatar" style="width: 40px; height: 40px; border-radius: 50%; margin-right: 10px;">
+            {% else %}
+                <img src="/static/images/default_avatar.png" alt="Avatar" class="avatar" style="width: 40px; height: 40px; border-radius: 50%; margin-right: 10px;">
+            {% endif %}
+            <span>Автор: {{ topic.author.username }}</span>
+        </div>
+        <span class="topic-category" style="font-size: 14px; color: #aaa;">Категория: {{ topic.category }}</span>
+    </div>
+
+    <!-- Описание темы -->
+    <div class="topic-description" style="margin-bottom: 20px; padding: 15px; background: #2a2a30; border-radius: 8px;">
+        <h3>Описание:</h3>
+        <p>{{ topic.description }}</p>
+    </div>
+
+    <!-- Посты -->
+    <div class="posts-section" style="margin-top: 30px;">
+        <h3>Комментарии:</h3>
+        {% if topic.posts.exists %}
+            {% for post in topic.posts.all %}
+                <div class="post-card" style="margin-bottom: 20px; background: #2a2a30; padding: 15px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);">
+                    <div class="post-author" style="display: flex; align-items: center;">
+                        {% if post.author.profile.avatar %}
+                            <img src="{{ post.author.profile.avatar.url }}" alt="Avatar" class="avatar" style="width: 30px; height: 30px; border-radius: 50%; margin-right: 8px;">
+                        {% else %}
+                            <img src="/static/images/default_avatar.png" alt="Avatar" class="avatar" style="width: 30px; height: 30px; border-radius: 50%; margin-right: 8px;">
+                        {% endif %}
+                        <span>{{ post.author.username }} - <span style="font-size: 12px; color: #ccc;">{{ post.created_at|date:"M d, Y H:i" }}</span></span>
+                    </div>
+                    <div class="post-content" style="margin-top: 10px; color: #ddd;">
+                        <h4>Описание поста:</h4>
+                        <p>{{ post.content|linebreaks }}</p>  <!-- Используем linebreaks для разрывов строк -->
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p>Нет комментариев в этой теме.</p>
+        {% endif %}
+    </div>
+
+    <!-- Форма для добавления поста -->
+    {% if user.is_authenticated %}
+        <div class="post-form-section" style="background: #2a2a30; padding: 20px; border-radius: 8px; margin-top: 30px;">
+            <h3>Добавить новый комментарий</h3>
+            <form method="post">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="{{ form.content.id_for_label }}" style="color: #d4af37;">Сообщение:</label>
+                    {{ form.content|add_class:"form-control" }}
+                    {% if form.content.errors %}
+                        <ul class="errorlist">
+                            {% for error in form.content.errors %}
+                                <li>{{ error }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                </div>
+                <button type="submit" class="btn-primary" style="background-color: #d4af37; padding: 10px 20px; border-radius: 5px; color: white; font-weight: bold;">Отправить</button>
+            </form>
+        </div>
+    {% else %}
+        <p>Для добавления поста необходимо <a href="{% url 'login' %}">войти</a>.</p>
+    {% endif %}
+
+    <!-- Кнопка для удаления темы, если пользователь является её автором -->
+    {% if user == topic.author %}
+        <div class="delete-topic-section" style="margin-top: 30px; text-align: right;">
+            <form action="{% url 'delete-topic' topic.id %}" method="post">
+                {% csrf_token %}
+                <button type="submit" class="btn-danger" style="background-color: #e74c3c; color: white; padding: 10px 20px; border-radius: 5px; font-weight: bold;">Удалить тему</button>
+            </form>
+        </div>
+    {% endif %}
+
+    <!-- Кнопка для возврата на главную страницу -->
+    <div class="back-button" style="margin-top: 30px;">
+        <a href="{% url 'home' %}" class="btn-primary" style="background-color: #d4af37; padding: 8px 16px; border-radius: 5px; color: white; text-decoration: none;">Назад к темам</a>
+    </div>
+
+</div>
+{% endblock %}

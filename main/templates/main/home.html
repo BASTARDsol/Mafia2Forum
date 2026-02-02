@@ -1,0 +1,63 @@
+{% extends 'main/base.html' %}
+
+{% block content %}
+    <h2 class="page-title">Последние темы</h2>
+
+    <div class="cards-container" style="display: flex; flex-wrap: wrap; gap: 20px; justify-content: flex-start;">
+        {% if topics %}
+            {% for topic in topics %}
+                <div class="topic-card" style="
+                    border-radius: 12px;
+                    padding: 20px;
+                    width: 100%;
+                    max-width: 350px;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                    background: #2a2a30;
+                    border-left: 5px solid
+                    {% if topic.category == 'Главная' %}#3498db
+                    {% elif topic.category == 'Новости' %}#e67e22
+                    {% elif topic.category == 'Ивенты' %}#2ecc71
+                    {% else %}#e74c3c
+                    {% endif %};
+                    transition: transform 0.2s ease-in-out;">
+
+                    <h3 style="color: #d4af37; font-size: 22px; margin: 0 0 10px 0;">
+                        <a href="{% url 'topic-detail' topic.id %}" style="color: #d4af37; font-weight: bold; text-decoration: none;">{{ topic.title }}</a>
+                    </h3>
+
+                    <p style="color: #ddd; font-size: 14px; margin: 10px 0;">
+                        {{ topic.description|truncatechars:120 }}
+                    </p>
+
+                    <div class="topic-meta" style="display: flex; justify-content: space-between; font-size: 14px; color: #aaa;">
+                        <!-- Аватар -->
+                        <div style="display: flex; align-items: center;">
+                            {% if topic.author.profile.avatar %}
+                                <img src="{{ topic.author.profile.avatar.url }}" alt="Avatar" style="width: 25px; height: 25px; border-radius: 50%; margin-right: 5px;">
+                            {% else %}
+                                <img src="/static/images/default_avatar.png" alt="Avatar" style="width: 25px; height: 25px; border-radius: 50%; margin-right: 5px;">
+                            {% endif %}
+                            <span>Автор: {{ topic.author.username }}</span>
+                        </div>
+
+                        <!-- Последний пост -->
+                        {% with last_post=last_posts.topic.id %}
+                            {% if last_post %}
+                                <span>Последний пост: {{ last_post.author.username }} {{ last_post.created_at|date:"d.m.Y H:i" }}</span>
+                            {% else %}
+                                <span>Нет постов</span>
+                            {% endif %}
+                        {% endwith %}
+                    </div>
+
+                    <!-- Кнопка "Посмотреть" -->
+                    <div style="display: flex; justify-content: flex-end; margin-top: 10px;">
+                        <a href="{% url 'topic-detail' topic.id %}" class="btn-primary" style="background-color: #d4af37; padding: 8px 16px; border-radius: 5px; color: white; text-decoration: none;">Посмотреть</a>
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p>Тем пока что нет.</p>
+        {% endif %}
+    </div>
+{% endblock %}

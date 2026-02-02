@@ -1,0 +1,14 @@
+{% extends 'main/base.html' %}
+
+{% block content %}
+<h2 class="page-title">Новости</h2>
+{% for topic in news_list %}
+  <div class="card">
+    <h3>{{ topic.title }}</h3>
+    <p>{{ topic.description|truncatechars:100 }}</p>
+    <a href="{% url 'topic-detail' topic.id %}">Перейти к теме</a>
+  </div>
+{% empty %}
+  <p>Новости пока нет.</p>
+{% endfor %}
+{% endblock %}
