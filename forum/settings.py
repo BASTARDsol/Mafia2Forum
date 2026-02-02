@@ -19,7 +19,7 @@ SECRET_KEY = 'django-insecure-4=+1=d5^^_uqbs%hsktj63e97%p1yyqfir0iu#r_h6r94+9#$+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['mafia2forum.onrender.com', 'localhost', '127.0.0.1']
 
 
 # Application definition
