@@ -21,7 +21,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['mafia2forum.onrender.com', 'localhost', '127.0.0.1', '*']
 USE_X_FORWARDED_HOST = True
-
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Application definition
 
@@ -119,3 +119,21 @@ LOGOUT_REDIRECT_URL = 'home'     # куда перенаправлять пос�
 # Статические файлы и шаблоны
 STATIC_URL = 'static/'
 AUTH_USER_MODEL = 'main.CustomUser'
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+    },
+}
