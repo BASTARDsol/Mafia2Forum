@@ -223,8 +223,8 @@
                 <a href="{% url 'home' %}" class="header-btn">Главная</a>
                 <a href="{% url 'news' %}" class="header-btn">Новости</a>
 
-                <!-- Кнопка создания темы -->
-                {% if user.is_authenticated %}
+                <!-- Кнопка создания поста, доступна только администраторам -->
+                {% if user.is_authenticated and user.is_staff %}
                     <a href="{% url 'create-topic' %}" class="header-btn">Создать пост</a>
                 {% endif %}
             </div>
