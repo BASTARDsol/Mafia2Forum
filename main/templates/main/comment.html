@@ -1,0 +1,23 @@
+<div class="comment-card">
+    <div class="comment-header">
+        <span class="comment-author">{{ comment.author.username }}</span>
+        <span class="comment-date">{{ comment.created_at }}</span>
+    </div>
+
+    <div class="comment-text">
+        {{ comment.content }}
+    </div>
+
+    <div class="comment-actions">
+        👍 {{ comment.likes.count }}
+        <a href="?reply={{ comment.id }}">Ответить</a>
+    </div>
+
+    {% if comment.replies.all %}
+        <div class="comment-replies">
+            {% for reply in comment.replies.all %}
+                {% include "main/comment.html" with comment=reply %}
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>

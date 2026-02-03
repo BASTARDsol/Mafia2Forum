@@ -29,6 +29,7 @@ class CustomUser(AbstractUser):
     def __str__(self):
         return self.username
 
+
 # ------------------------
 # Профиль пользователя с аватаром
 # ------------------------
@@ -47,7 +48,7 @@ class Profile(models.Model):
             pass
         super(Profile, self).save(*args, **kwargs)
 
-# Создаём профиль при создании пользователя
+
 @receiver(post_save, sender=CustomUser)
 def create_or_save_user_profile(sender, instance, created, **kwargs):
     if created:
@@ -55,8 +56,9 @@ def create_or_save_user_profile(sender, instance, created, **kwargs):
     else:
         instance.profile.save()
 
+
 # ------------------------
-# Форум (раздел форума)
+# Форум
 # ------------------------
 class Forum(models.Model):
     name = models.CharField(max_length=100)
@@ -65,14 +67,16 @@ class Forum(models.Model):
     def __str__(self):
         return self.name
 
-# ------------------------
-# Категория тем форума
-# ------------------------
-class Category(models.Model):
-    name = models.CharField(max_length=100)
 
-    def __str__(self):
-        return self.name
+# ------------------------
+# Категории для темы
+# ------------------------
+CATEGORY_CHOICES = [
+    ('Главная', 'Главная'),
+    ('Новости', 'Новости'),
+    ('Ивенты', 'Ивенты'),
+    ('Другое', 'Другое'),
+]
 
 # ------------------------
 # Тема форума
@@ -86,32 +90,90 @@ class Topic(models.Model):
         blank=True
     )
     title = models.CharField(max_length=200)
-    description = models.TextField()
-    category = models.CharField(max_length=50, choices=[
-        ('Главная', 'Главная'),
-        ('Новости', 'Новости'),
-        ('Ивенты', 'Ивенты'),
-    ])
-    author = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    description = models.TextField(blank=True)
+    category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, default='Другое')
+    author = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="topics")
     created_at = models.DateTimeField(auto_now_add=True)
-    image = models.ImageField(upload_to='topic_images/', null=True, blank=True)
+    image = models.ImageField(upload_to='topic_images/', blank=True, null=True)
 
     def __str__(self):
         return self.title
+
 
 # ------------------------
 # Пост внутри темы
 # ------------------------
 class Post(models.Model):
-    topic = models.ForeignKey(
-        Topic,
-        on_delete=models.CASCADE,
-        related_name='posts'  # <- это позволит делать topic.posts
-    )
+    topic = models.ForeignKey(Topic, on_delete=models.CASCADE, related_name='posts')
     author = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
-    content = models.TextField()  # заменил description на content для постов
+    content = models.TextField()
     image = models.ImageField(upload_to='posts/', blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    # Вложенные ответы
+    parent = models.ForeignKey(
+        'self',
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name='replies'
+    )
+
+    # Лайки через ManyToMany
+    likes = models.ManyToManyField(CustomUser, blank=True, related_name='liked_posts')
+
     def __str__(self):
         return f"{self.author.username}: {self.content[:20]}"
+
+    def total_likes(self):
+        return self.likes.count()
+
+
+# ------------------------
+# Комментарии к теме
+# ------------------------
+class Comment(models.Model):
+    topic = models.ForeignKey(Topic, on_delete=models.CASCADE, related_name="comments")
+    author = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="comments")
+    content = models.TextField()
+    image = models.ImageField(upload_to='comments/', blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    # Для сортировки по дате
+    class Meta:
+        ordering = ['created_at']
+
+    def __str__(self):
+        return f"{self.author.username} - {self.topic.title[:20]}"
+
+    def likes_count(self):
+        return self.reactions.filter(reaction_type='like').count()
+
+    def dislikes_count(self):
+        return self.reactions.filter(reaction_type='dislike').count()
+
+
+# ------------------------
+# Реакции (лайк/дизлайк)
+# ------------------------
+REACTION_CHOICES = [
+    ('like', 'Like'),
+    ('dislike', 'Dislike'),
+]
+
+class PostReaction(models.Model):
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='reactions')
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    reaction_type = models.CharField(max_length=7, choices=REACTION_CHOICES)
+
+    class Meta:
+        unique_together = ('post', 'user')
+
+
+class CommentReaction(models.Model):
+    comment = models.ForeignKey(Comment, on_delete=models.CASCADE, related_name='reactions')
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    reaction_type = models.CharField(max_length=7, choices=REACTION_CHOICES)
+
+    class Meta:
+        unique_together = ('comment', 'user')

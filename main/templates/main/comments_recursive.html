@@ -1,0 +1,31 @@
+{% for comment in comments %}
+<div class="comment-card">
+    <div class="comment-header">
+        <strong>{{ comment.author.username }}</strong>
+        <span class="comment-date">{{ comment.created_at|date:"d M Y H:i" }}</span>
+    </div>
+    <p>{{ comment.content|linebreaks }}</p>
+
+    {% if comment.image %}
+    <img src="{{ comment.image.url }}" class="reply-image">
+    {% endif %}
+
+    {% if user.is_authenticated %}
+    <form method="post"
+          action="{% if post_id %}{% url 'add-reply' post_id=post_id %}{% endif %}"
+          class="reply-form" enctype="multipart/form-data">
+        {% csrf_token %}
+        <input type="hidden" name="parent" value="{{ comment.id }}">
+        <textarea name="content" placeholder="Ответ..." class="reply-textarea"></textarea>
+        <input type="file" name="image" class="reply-image-input">
+        <button type="submit" class="reply-btn">Ответить</button>
+    </form>
+    {% endif %}
+
+    {% if comment.replies.all %}
+    <div class="reply-card">
+        {% include "main/comments_recursive.html" with comments=comment.replies.all post_id=post_id %}
+    </div>
+    {% endif %}
+</div>
+{% endfor %}

@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm, PasswordChangeForm
-from .models import CustomUser, Profile, Topic, Post
+from .models import CustomUser, Profile, Topic, Post, Comment
+
 # ------------------------
 # Регистрация пользователя
 # ------------------------
@@ -53,12 +54,12 @@ class CustomPasswordChangeForm(PasswordChangeForm):
 class TopicCreateForm(forms.ModelForm):
     class Meta:
         model = Topic
-        fields = ('title', 'description', 'category', 'image')  # Добавляем 'image'
+        fields = ('title', 'description', 'category', 'image')
         labels = {
             'title': 'Название темы',
             'description': 'Описание',
             'category': 'Категория',
-            'image': 'Изображение',  # Добавляем подпись для изображения
+            'image': 'Изображение',
         }
         widgets = {
             'title': forms.TextInput(attrs={
@@ -71,24 +72,12 @@ class TopicCreateForm(forms.ModelForm):
                 'placeholder': 'Краткое описание темы'
             }),
             'category': forms.Select(attrs={'class': 'form-control'}),
-            'image': forms.ClearableFileInput(attrs={'class': 'form-control-file'}),  # Добавляем виджет для изображения
+            'image': forms.ClearableFileInput(attrs={'class': 'form-control-file'}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        # Оставляем только категорию "Новости"
-        self.fields['category'].choices = [
-            ('Новости', 'Новости')
-        ]
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        # Оставляем только категорию "Новости"
-        self.fields['category'].choices = [
-            ('Новости', 'Новости')
-        ]
+        self.fields['category'].choices = Topic._meta.get_field('category').choices
 
 # ------------------------
 # Добавление поста в тему
@@ -98,12 +87,34 @@ class PostCreateForm(forms.ModelForm):
         model = Post
         fields = ['content', 'image']
         labels = {
-            'content': 'Сообщение',
+            'content': 'Комментарий',
         }
         widgets = {
             'content': forms.Textarea(attrs={
                 'class': 'form-control',
-                'placeholder': 'Напишите сообщение...',
-                'rows': 5
-            })
+                'placeholder': 'Напишите комментарий...',
+                'rows': 3
+            }),
+            'image': forms.ClearableFileInput(attrs={'class': 'form-control-file'})
         }
+
+# ------------------------
+# Добавление комментария к теме
+# ------------------------
+class CommentForm(forms.ModelForm):
+    content = forms.CharField(
+        widget=forms.Textarea(attrs={
+            'rows': 3,
+            'placeholder': 'Напишите комментарий...',
+            'class': 'form-control'
+        }),
+        label=''
+    )
+    image = forms.ImageField(
+        required=False,
+        widget=forms.ClearableFileInput(attrs={'class': 'form-control-file'})
+    )
+
+    class Meta:
+        model = Comment
+        fields = ['content', 'image']

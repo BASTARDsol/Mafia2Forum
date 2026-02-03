@@ -1,47 +1,134 @@
-/* forum.css */
-.forum-container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 20px;
-    color: #f0f0f0;
+/* --- ОБЩЕЕ --- */
+body {
+    background: #0f1115;
+    color: #e6e6e6;
+    font-family: Arial, Helvetica, sans-serif;
+    margin: 0;
 }
 
-.forum-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-    gap: 20px;
-}
-
-.forum-card {
-    background: #24242d;
-    border-radius: 12px;
-    padding: 20px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-    transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.forum-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.7);
-}
-
-.forum-card h2 a {
-    color: #ffcc00;
+a {
     text-decoration: none;
+    color: #4da3ff;
 }
 
-.forum-card p {
-    color: #ccc;
-    font-size: 0.9rem;
-    margin: 10px 0;
+a:hover {
+    color: #6fb6ff;
 }
 
-.forum-stats {
+/* --- КОНТЕЙНЕР --- */
+.container {
+    width: 900px;
+    margin: 30px auto;
+}
+
+/* --- КАРТОЧКИ --- */
+.card {
+    background: #1a1d24;
+    border-radius: 12px;
+    padding: 15px 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+}
+
+/* --- ЗАГОЛОВКИ --- */
+h1, h2, h3 {
+    margin-top: 0;
+    color: #ffffff;
+}
+
+/* --- ФОРМЫ --- */
+input[type="text"],
+input[type="file"],
+textarea,
+select {
+    width: 100%;
+    background: #111319;
+    border: 1px solid #2a2f3a;
+    color: #e6e6e6;
+    border-radius: 8px;
+    padding: 10px;
+    margin-top: 5px;
+    margin-bottom: 15px;
+    box-sizing: border-box;
+    outline: none;
+    transition: 0.2s;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+    border-color: #4da3ff;
+}
+
+/* УБИРАЕМ РАСТЯГИВАНИЕ */
+textarea {
+    resize: none;
+    min-height: 100px;
+}
+
+/* --- КНОПКИ --- */
+button,
+.btn {
+    background: #4da3ff;
+    border: none;
+    color: white;
+    padding: 10px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: 0.2s;
+    font-size: 14px;
+}
+
+button:hover,
+.btn:hover {
+    background: #6fb6ff;
+}
+
+.btn-danger {
+    background: #ff4d4d;
+}
+
+.btn-danger:hover {
+    background: #ff6b6b;
+}
+
+/* --- ПОСТ --- */
+.post {
+    display: flex;
+    gap: 15px;
+}
+
+.post-avatar img {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.post-content {
+    flex: 1;
+}
+
+.post-author {
+    font-weight: bold;
+    color: #ffffff;
+}
+
+.post-date {
+    font-size: 12px;
+    color: #8a8f99;
+}
+
+/* --- КОММЕНТАРИИ --- */
+.comment {
     margin-top: 15px;
-    font-size: 0.85rem;
-    color: #aaa;
+    padding: 10px;
+    background: #14171d;
+    border-radius: 8px;
 }
 
-.forum-stats span {
-    display: block;
+/* --- ИЗОБРАЖЕНИЯ --- */
+img {
+    max-width: 100%;
+    border-radius: 8px;
 }

@@ -1,103 +1,143 @@
 {% extends "main/base.html" %}
-{% load widget_tweaks %}
+{% load static %}
 
 {% block content %}
-<div class="topic-detail-container">
+<div class="topic-container">
 
-    <!-- Заголовок темы -->
-    <h2 class="page-title">{{ topic.title }}</h2>
-
-    <!-- Изображение темы -->
-    {% if topic.image %}
-        <div class="topic-image" style="margin-bottom: 20px;">
-            <img src="{{ topic.image.url }}" alt="Изображение темы" style="max-width: 100%; border-radius: 8px;">
+    <!-- Тема -->
+    <div class="topic-header">
+        <div>
+            <h1 class="topic-title">{{ topic.title }}</h1>
+            <span class="topic-meta">Автор: {{ topic.author.username }} | {{ topic.created_at|date:"d M Y H:i" }}</span>
         </div>
-    {% else %}
-        <p>Изображение темы не загружено.</p>
-    {% endif %}
-
-    <!-- Автор темы -->
-    <div class="topic-author" style="margin-bottom: 20px; padding: 15px; background: #1c1c22; border-radius: 8px;">
-        <div class="author-info" style="display: flex; align-items: center;">
-            {% if topic.author.profile.avatar %}
-                <img src="{{ topic.author.profile.avatar.url }}" alt="Avatar" class="avatar" style="width: 40px; height: 40px; border-radius: 50%; margin-right: 10px;">
-            {% else %}
-                <img src="/static/images/default_avatar.png" alt="Avatar" class="avatar" style="width: 40px; height: 40px; border-radius: 50%; margin-right: 10px;">
-            {% endif %}
-            <span>Автор: {{ topic.author.username }}</span>
-        </div>
-        <span class="topic-category" style="font-size: 14px; color: #aaa;">Категория: {{ topic.category }}</span>
-    </div>
-
-    <!-- Описание темы -->
-    <div class="topic-description" style="margin-bottom: 20px; padding: 15px; background: #2a2a30; border-radius: 8px;">
-        <h3>Описание:</h3>
-        <p>{{ topic.description }}</p>
-    </div>
-
-    <!-- Посты -->
-    <div class="posts-section" style="margin-top: 30px;">
-        <h3>Комментарии:</h3>
-        {% if topic.posts.exists %}
-            {% for post in topic.posts.all %}
-                <div class="post-card" style="margin-bottom: 20px; background: #2a2a30; padding: 15px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);">
-                    <div class="post-author" style="display: flex; align-items: center;">
-                        {% if post.author.profile.avatar %}
-                            <img src="{{ post.author.profile.avatar.url }}" alt="Avatar" class="avatar" style="width: 30px; height: 30px; border-radius: 50%; margin-right: 8px;">
-                        {% else %}
-                            <img src="/static/images/default_avatar.png" alt="Avatar" class="avatar" style="width: 30px; height: 30px; border-radius: 50%; margin-right: 8px;">
-                        {% endif %}
-                        <span>{{ post.author.username }} - <span style="font-size: 12px; color: #ccc;">{{ post.created_at|date:"M d, Y H:i" }}</span></span>
-                    </div>
-                    <div class="post-content" style="margin-top: 10px; color: #ddd;">
-                        <h4>Описание поста:</h4>
-                        <p>{{ post.content|linebreaks }}</p>  <!-- Используем linebreaks для разрывов строк -->
-                    </div>
-                </div>
-            {% endfor %}
-        {% else %}
-            <p>Нет комментариев в этой теме.</p>
+        {% if user == topic.author %}
+        <form method="post" action="{% url 'topic-delete' topic.id %}">
+            {% csrf_token %}
+            <button type="submit" class="delete-topic-btn">Удалить тему</button>
+        </form>
         {% endif %}
     </div>
 
-    <!-- Форма для добавления поста -->
-    {% if user.is_authenticated %}
-        <div class="post-form-section" style="background: #2a2a30; padding: 20px; border-radius: 8px; margin-top: 30px;">
-            <h3>Добавить новый комментарий</h3>
-            <form method="post">
-                {% csrf_token %}
-                <div class="form-group">
-                    <label for="{{ form.content.id_for_label }}" style="color: #d4af37;">Сообщение:</label>
-                    {{ form.content|add_class:"form-control" }}
-                    {% if form.content.errors %}
-                        <ul class="errorlist">
-                            {% for error in form.content.errors %}
-                                <li>{{ error }}</li>
-                            {% endfor %}
-                        </ul>
-                    {% endif %}
+    {% if topic.image %}
+    <div class="topic-image">
+        <img src="{{ topic.image.url }}" alt="{{ topic.title }}">
+    </div>
+    {% endif %}
+
+    {% if topic.description %}
+    <div class="topic-description">{{ topic.description|linebreaks }}</div>
+    {% endif %}
+
+    <div class="topic-likes">❤️ {{ topic.total_likes }} всего лайков</div>
+
+    <!-- Посты -->
+    <div class="posts-container">
+        {% for post in posts %}
+        <div class="post-card" id="post-{{ post.id }}">
+            <div class="post-header">
+                <div class="post-user">
+                    <div class="avatar">{{ post.author.username|slice:":2"|upper }}</div>
+                    <div class="user-info">
+                        <strong>{{ post.author.username }}</strong>
+                        <span class="post-date">{{ post.created_at|date:"d M Y H:i" }}</span>
+                    </div>
                 </div>
-                <button type="submit" class="btn-primary" style="background-color: #d4af37; padding: 10px 20px; border-radius: 5px; color: white; font-weight: bold;">Отправить</button>
-            </form>
-        </div>
-    {% else %}
-        <p>Для добавления поста необходимо <a href="{% url 'login' %}">войти</a>.</p>
-    {% endif %}
+                {% if user == post.author %}
+                <form method="post" action="{% url 'delete-post' post.id %}">
+                    {% csrf_token %}
+                    <button class="delete-btn" title="Удалить пост">🗑️</button>
+                </form>
+                {% endif %}
+            </div>
 
-    <!-- Кнопка для удаления темы, если пользователь является её автором -->
-    {% if user == topic.author %}
-        <div class="delete-topic-section" style="margin-top: 30px; text-align: right;">
-            <form action="{% url 'delete-topic' topic.id %}" method="post">
-                {% csrf_token %}
-                <button type="submit" class="btn-danger" style="background-color: #e74c3c; color: white; padding: 10px 20px; border-radius: 5px; font-weight: bold;">Удалить тему</button>
-            </form>
-        </div>
-    {% endif %}
+            <div class="post-content">{{ post.content|linebreaks }}</div>
+            {% if post.image %}
+            <div class="post-image"><img src="{{ post.image.url }}" alt="Post image"></div>
+            {% endif %}
 
-    <!-- Кнопка для возврата на главную страницу -->
-    <div class="back-button" style="margin-top: 30px;">
-        <a href="{% url 'home' %}" class="btn-primary" style="background-color: #d4af37; padding: 8px 16px; border-radius: 5px; color: white; text-decoration: none;">Назад к темам</a>
+            <div class="post-actions">
+                {% if user.is_authenticated %}
+                <button class="action-btn like-btn" data-post-id="{{ post.id }}">
+                    {% if user in post.likes.all %}❤️{% else %}🤍{% endif %} <span class="like-count">{{ post.likes.count }}</span>
+                </button>
+                {% endif %}
+                <button class="action-btn comment-btn" onclick="toggleReplies({{ post.id }})">
+                    💬 {{ post.replies.count }}
+                </button>
+            </div>
+
+            <!-- Контейнер для ответов -->
+            <div id="replies-{{ post.id }}" class="replies-container" style="display:none; margin-top:10px;">
+                {% include "main/comments_recursive.html" with comments=post.replies.all %}
+
+                {% if user.is_authenticated %}
+                <form method="post" action="{% url 'add-reply' post.id %}" enctype="multipart/form-data" class="reply-form">
+                    {% csrf_token %}
+                    <div class="reply-header">
+                        <div class="avatar">{{ user.username|slice:":2"|upper }}</div>
+                        <span>Ответ на пост {{ post.author.username }}</span>
+                    </div>
+                    <textarea name="content" placeholder="Напишите комментарий..." class="reply-textarea"></textarea>
+                    <input type="file" name="image" class="reply-image-input">
+                    <button type="submit" class="reply-btn">Ответить</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Комментарии к теме -->
+    <div class="topic-comments">
+        <h2>Комментарии к теме</h2>
+        {% include "main/comments_recursive.html" with comments=comments %}
+
+        {% if user.is_authenticated %}
+        <form method="post" enctype="multipart/form-data" class="new-comment-form">
+            {% csrf_token %}
+            <div class="reply-header">
+                <div class="avatar">{{ user.username|slice:":2"|upper }}</div>
+                <span>Новый комментарий</span>
+            </div>
+            <textarea name="content" placeholder="Напишите комментарий..." class="reply-textarea"></textarea>
+            <input type="file" name="image" class="reply-image-input">
+            <button type="submit" class="reply-btn">Отправить</button>
+        </form>
+        {% else %}
+        <p><a href="{% url 'login' %}">Войдите</a>, чтобы оставлять комментарии и посты.</p>
+        {% endif %}
     </div>
 
 </div>
+
+<script>
+function toggleReplies(postId) {
+    const replies = document.getElementById('replies-' + postId);
+    replies.style.display = replies.style.display === 'none' ? 'block' : 'none';
+}
+
+document.querySelectorAll('.like-btn').forEach(button => {
+    button.addEventListener('click', async () => {
+        const postId = button.dataset.postId || button.dataset.commentId;
+        const isComment = !!button.dataset.commentId;
+        const url = isComment ? `/react_comment/${postId}/` : `/react_post/${postId}/`;
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+        const formData = new FormData();
+        formData.append('reaction', button.innerText.includes('❤️') ? 'dislike' : 'like');
+
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrfToken },
+            body: formData
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            button.querySelector('.like-count').textContent = data.likes;
+            button.innerHTML = (data.user_reaction === 'like' ? '❤️' : '🤍') + ' ' + data.likes;
+        }
+    });
+});
+</script>
 {% endblock %}

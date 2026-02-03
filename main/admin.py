@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import CustomUser, Profile, Topic, Post, Category
+from .models import CustomUser, Profile, Topic, Post
 
 
 @admin.register(CustomUser)
@@ -14,8 +14,7 @@ class CustomUserAdmin(UserAdmin):
         ('Форум', {'fields': ('is_forum_admin',)}),
     )
 
-
+# Регистрация остальных моделей
 admin.site.register(Profile)
 admin.site.register(Topic)
 admin.site.register(Post)
-admin.site.register(Category)

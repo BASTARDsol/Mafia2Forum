@@ -1,239 +1,192 @@
 /* ==============================================
-   Основные настройки
+   TOPIC DETAIL
    ============================================== */
-body {
-    font-family: 'Open Sans', sans-serif;
-    background-color: #1a1a1a; /* темный фон форума */
-    color: #f0f0f0;
-    margin: 0;
-    padding: 0;
-}
 
-a {
-    color: #d4af37;
-    text-decoration: none;
-}
-
-a:hover {
-    text-decoration: underline;
-}
-
-h1, h2, h3, h4 {
-    font-family: 'Merriweather', serif;
-}
-
-/* ==============================================
-   Контейнер
-   ============================================== */
-.container {
-    width: 90%;
-    max-width: 1200px;
+.topic-container {
+    max-width: 900px;
     margin: 0 auto;
-    padding: 20px 0;
-}
-
-/* ==============================================
-   Header
-   ============================================== */
-header {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin-bottom: 30px;
-}
-
-.header-container {
-    width: 100%;
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 10px;
-}
-
-.header-left a, .header-right a {
-    margin-right: 15px;
-    font-weight: 600;
-}
-
-.header-left a:last-child, .header-right a:last-child {
-    margin-right: 0;
-}
-
-/* ==============================================
-   Карточки и блоки
-   ============================================== */
-.cards-container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 20px;
-    justify-content: center;
-}
-
-.card {
-    background-color: #2a2a2a;
-    border-radius: 12px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.5);
     padding: 20px;
-    margin-bottom: 20px;
-    color: #f0f0f0;
+}
+
+/* ---------- Заголовок темы ---------- */
+.topic-title {
+    font-size: 34px;
+    margin-bottom: 18px;
+    font-family: 'Merriweather', serif;
+    color: #d4af37;
+    text-shadow: 0 0 6px rgba(212,175,55,0.25);
+}
+
+/* ---------- Картинка темы ---------- */
+.topic-image img {
     width: 100%;
-    max-width: 700px;
-    box-sizing: border-box;
+    max-width: 620px;
+    height: auto;
+    display: block;
+    margin: 0 auto 18px;
+    border-radius: 14px;
+    box-shadow: 0 6px 14px rgba(0,0,0,0.6);
 }
 
-.card h2 {
-    margin-top: 0;
+/* ---------- Метаданные ---------- */
+.topic-meta {
+    background: #15151a;
+    padding: 12px 14px;
+    border-radius: 10px;
+    color: #9a9a9a;
+    font-size: 14px;
+    margin-bottom: 18px;
+    border-left: 3px solid #d4af37;
 }
 
-.card p {
-    margin-bottom: 10px;
+/* ---------- Описание ---------- */
+.topic-description {
+    background: #17171c;
+    padding: 14px;
+    border-radius: 10px;
+    margin-bottom: 25px;
+    line-height: 1.6;
+    box-shadow: inset 0 0 8px rgba(0,0,0,0.4);
 }
 
-/* ==============================================
-   Кнопки
-   ============================================== */
-.btn, .btn-primary {
-    display: inline-block;
-    background-color: #d4af37;
-    color: #1a1a1a;
-    font-weight: 600;
-    padding: 10px 20px;
-    border-radius: 8px;
-    border: none;
-    cursor: pointer;
-    text-align: center;
-}
-
-.btn:hover, .btn-primary:hover {
-    background-color: #b8912f;
-}
-
-/* ==============================================
-   Формы
-   ============================================== */
-.form-group {
-    margin-bottom: 15px;
+/* ---------- Контейнер постов ---------- */
+.posts-container {
     display: flex;
     flex-direction: column;
+    gap: 18px;
 }
 
-.form-group label {
-    margin-bottom: 5px;
-    font-weight: 600;
+/* ---------- Карточка поста ---------- */
+.post-card {
+    background: linear-gradient(145deg, #1c1c22, #23232b);
+    border-radius: 12px;
+    padding: 14px 16px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.55);
+    transition: 0.25s;
 }
 
-.form-control {
-    padding: 8px 10px;
-    border-radius: 6px;
-    border: 1px solid #555;
-    background-color: #1a1a1a;
-    color: #f0f0f0;
+.post-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 18px rgba(0,0,0,0.7);
+}
+
+/* ---------- Текст поста ---------- */
+.post-text {
+    line-height: 1.5;
+    word-wrap: break-word;
+    font-size: 15px;
+    color: #e8e8e8;
+}
+
+/* ---------- Картинка поста ---------- */
+.post-image img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 10px;
+    margin-top: 10px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+}
+
+/* ---------- Действия ---------- */
+.post-actions {
+    display: flex;
+    gap: 16px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+/* ---------- Лайк ---------- */
+.btn-like {
+    background: none;
+    border: none;
+    color: #c9c9c9;
+    cursor: pointer;
     font-size: 14px;
-    box-sizing: border-box;
-    width: 100%;
-}
-
-.form-control:focus {
-    outline: none;
-    border-color: #d4af37;
-}
-
-/* ==============================================
-   Поле описания с фиксированной высотой и скроллом
-   ============================================== */
-.description-scroll {
-    max-height: 150px;    /* фиксированная высота */
-    overflow-y: auto;     /* вертикальный скролл */
-    resize: none;         /* нельзя растягивать вручную */
-}
-
-/* ==============================================
-   Списки ошибок
-   ============================================== */
-.errorlist {
-    margin: 5px 0 0 0;
-    padding: 0;
-    list-style: none;
-    color: #ff6b6b;
-    font-size: 13px;
-}
-
-.errorlist li {
-    margin-bottom: 3px;
-}
-
-/* ==============================================
-   Footer
-   ============================================== */
-footer {
-    text-align: center;
-    margin-top: 40px;
-    padding: 15px 0;
-    border-top: 1px solid #555;
-    color: #aaa;
-    font-size: 14px;
-}
-
-/* ==============================================
-   Адаптив
-   ============================================== */
-@media (max-width: 768px) {
-    .cards-container {
-        flex-direction: column;
-        align-items: center;
-    }
-
-    .header-container {
-        flex-direction: column;
-        align-items: center;
-    }
-
-    .header-left, .header-right {
-        margin-bottom: 10px;
-    }
-
-    .avatar {
-    width: 35px;
-    height: 35px;
-    border-radius: 50%;
-    object-fit: cover;
-    vertical-align: middle;
-    margin-right: 10px;
-    }
-
-    .topic-card .avatar {
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    margin-right: 8px; /* Расстояние между аватаром и ником */
-}
-
-/* Стиль для выравнивания элементов */
-.topic-card .author-info {
     display: flex;
     align-items: center;
-    font-size: 14px;
-    color: #777;
+    gap: 6px;
+    padding: 0;
+    transition: 0.2s;
 }
 
-.btn-primary {
-    background-color: #d4af37;
-    color: #0d0d10;
-    padding: 8px 15px;
-    border-radius: 6px;
-    font-weight: 700;
-    text-decoration: none;
+.btn-like:hover {
+    color: #ff6b6b;
+    transform: scale(1.08);
 }
 
-.btn-primary:hover {
-    background-color: #c19b2e;
+/* ---------- Удаление ---------- */
+.btn-delete-comment {
+    background: none;
+    border: none;
+    color: #f55;
+    cursor: pointer;
+    font-size: 13px;
+    padding: 0;
+    transition: 0.2s;
 }
 
-/* Стиль для аватара */
-.avatar {
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    margin-right: 8px;
+.btn-delete-comment:hover {
+    color: #ff2a2a;
 }
 
+/* ==============================================
+   REPLIES
+   ============================================== */
+
+.reply-card {
+    margin-left: 35px;
+    margin-top: 10px;
+    background: #26262f;
+    padding: 8px 12px;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    border-left: 2px solid #d4af37;
+}
+
+.reply-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 6px;
+}
+
+/* ---------- Форма ответа ---------- */
+.reply-form textarea {
+    width: 100%;
+    resize: none;           /* УБИРАЕТ ТРЕУГОЛЬНИК */
+    margin-top: 6px;
+    background: #2a2a30;
+    color: #f0f0f0;
+    border: none;
+    border-radius: 8px;
+    padding: 10px;
+    min-height: 70px;
+    max-height: 160px;
+}
+
+/* ---------- Скрытие ---------- */
+.hidden {
+    display: none;
+}
+
+/* ==============================================
+   АДАПТИВ
+   ============================================== */
+
+@media (max-width: 768px) {
+    .topic-container {
+        padding: 12px;
+    }
+
+    .reply-card {
+        margin-left: 15px;
+    }
+
+    .post-actions {
+        flex-wrap: wrap;
+    }
+
+    .topic-title {
+        font-size: 26px;
+    }
 }

@@ -1,249 +1,179 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <title>Gli Custodi — RP Forum</title>
+<meta charset="UTF-8">
+<title>Gli Custodi — RP Forum</title>
 
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
 
-    <!-- CSS -->
-    <link rel="stylesheet" href="/static/css/style.css">
+<link rel="stylesheet" href="{% static 'css/style.css' %}">
 
-    <style>
-        /* --- Общие настройки --- */
-        body {
-            margin: 0;
-            padding: 0;
-            background: #0d0d10;
-            color: #f5e6c4;
-            font-family: 'Open Sans', sans-serif;
-        }
+<style>
+/* ----------------- Общие стили ----------------- */
+html, body { height: 100%; margin: 0; padding: 0; }
+body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background: #0d0d10;
+    color: #f5e6c4;
+    font-family: 'Open Sans', sans-serif;
+}
+a { color: #d4af37; text-decoration: none; transition: 0.2s; }
+a:hover { color: #ffcc00; text-decoration: underline; }
 
-        a {
-            color: #d4af37;
-            text-decoration: none;
-        }
+.container { flex: 1; display: flex; flex-direction: column; width: 950px; max-width: 95%; margin: 0 auto; padding: 20px; }
 
-        a:hover {
-            text-decoration: underline;
-        }
+/* ----------------- Header ----------------- */
+header {
+    background: #1c1c22;
+    border-radius: 8px;
+    padding: 12px 20px;
+    margin-bottom: 25px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.8);
+}
+.header-container { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+.header-left, .header-right { display: flex; align-items: center; gap: 10px; }
+.header-right { margin-left: auto; }
+.header-btn {
+    background-color: #d4af37; color: #0d0d10; padding: 8px 15px; border-radius: 6px; font-weight: 700;
+    text-decoration: none; transition: all 0.3s ease; white-space: nowrap;
+}
+.header-btn:hover { background-color: #c19b2e; transform: scale(1.05); box-shadow: 0 0 10px #d4af37; }
 
-        .container {
-            width: 950px;
-            margin: 0 auto;
-            padding: 20px;
-        }
+.logo { font-family: 'Merriweather', serif; font-size: 42px; color: #d4af37; margin: 10px 0; letter-spacing: 2px; text-align: center; }
 
-        /* --- Шапка --- */
-        header {
-            background: #1c1c22;
-            border-radius: 8px;
-            padding: 15px 30px;
-            margin-bottom: 25px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.7);
-        }
+/* ----------------- Avatar ----------------- */
+.avatar {
+    width: 45px; height: 45px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #d4af37;
+    padding: 2px;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.avatar:hover { transform: scale(1.15); box-shadow: 0 0 10px #d4af37; }
 
-        .header-container {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+/* ----------------- Cards ----------------- */
+.card, .post-card, .comment-card, .new-post-card {
+    background: linear-gradient(145deg, #1c1c22, #2a2a30);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 6px 12px rgba(0,0,0,0.7);
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+.card:hover, .post-card:hover, .comment-card:hover, .new-post-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 25px rgba(212,175,55,0.6);
+}
 
-        /* Кнопки шапки */
-        .header-btn {
-            background-color: #d4af37;
-            color: #0d0d10;
-            padding: 8px 15px;
-            border-radius: 6px;
-            font-weight: 700;
-            text-decoration: none;
-            margin-right: 10px;
-        }
+/* ----------------- Forms ----------------- */
+input, textarea, select, button {
+    width: 100%; padding: 12px; margin-bottom: 12px; border-radius: 6px; border: none; font-family: 'Open Sans', sans-serif; font-size: 14px;
+}
+input, textarea, select {
+    background: #2a2a30;
+    color: #f5e6c4;
+}
 
-        .header-btn:hover {
-            background-color: #c19b2e;
-            text-decoration: none;
-        }
+/* УБИРАЕМ РАСТЯГИВАНИЕ TEXTAREA */
+textarea {
+    resize: none;
+}
 
-        header h1, .logo {
-            font-family: 'Merriweather', serif;
-            font-size: 42px;
-            color: #d4af37;
-            margin: 10px 0 0 0;
-            letter-spacing: 2px;
-            text-align: center;
-        }
+textarea:focus, input:focus, select:focus {
+    outline: none;
+    border-color: #d4af37;
+    background: #262632;
+}
 
-        /* --- Аватар --- */
-        .avatar {
-            width: 45px;
-            height: 45px;
-            border-radius: 50%;
-            object-fit: cover;
-            vertical-align: middle;
-            border: 2px solid #d4af37;
-            padding: 2px;
-        }
+button {
+    background-color: #d4af37; color: #0d0d10; font-weight: 700; cursor: pointer; transition: all 0.3s ease;
+}
+button:hover { background-color: #c19b2e; transform: scale(1.05); box-shadow: 0 0 10px #d4af37; }
 
-        /* --- Карточки --- */
-        .card {
-            background: linear-gradient(145deg, #1c1c22, #2a2a30);
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 6px 12px rgba(0,0,0,0.6);
-            transition: transform 0.2s;
-        }
+/* ----------------- Headings ----------------- */
+h2.page-title { font-family: 'Merriweather', serif; font-size: 32px; margin-bottom: 20px; border-bottom: 1px solid #d4af37; padding-bottom: 10px; }
 
-        .card:hover {
-            transform: translateY(-3px);
-        }
+/* ----------------- Footer ----------------- */
+footer {
+    text-align: center; padding: 15px 0;
+    background: #1c1c22; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.8); margin-top: auto;
+}
 
-        .card h2 {
-            font-family: 'Merriweather', serif;
-            font-size: 26px;
-            margin-top: 0;
-            color: #d4af37;
-        }
+/* ----------------- Forum Table ----------------- */
+.forum-table { width: 100%; border-collapse: collapse; background: #1c1c22; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.6); }
+.forum-table th { background: #2a2a30; color: #d4af37; padding: 12px; text-align: left; font-weight: 700; }
+.forum-table td { padding: 12px; border-bottom: 1px solid #2f2f36; }
+.forum-table tr:hover { background: #24242b; }
+.topic-link { font-weight: 700; font-size: 18px; color: #d4af37; }
+.topic-desc { font-size: 14px; color: #aaa; margin-top: 5px; }
 
-        /* --- Формы --- */
-        input, textarea, select, button {
-            width: 100%;
-            padding: 12px;
-            margin-bottom: 12px;
-            border-radius: 6px;
-            border: none;
-            font-family: 'Open Sans', sans-serif;
-            font-size: 14px;
-        }
-
-        input, textarea, select {
-            background: #2a2a30;
-            color: #f5e6c4;
-        }
-
-        button {
-            background-color: #d4af37;
-            color: #0d0d10;
-            font-weight: 700;
-            cursor: pointer;
-        }
-
-        /* --- Заголовки страниц --- */
-        h2.page-title {
-            font-family: 'Merriweather', serif;
-            font-size: 32px;
-            margin-bottom: 20px;
-            border-bottom: 1px solid #d4af37;
-            padding-bottom: 10px;
-        }
-
-        /* ========================= */
-        /*      ТАБЛИЦА ФОРУМА        */
-        /* ========================= */
-
-        .forum-table {
-            width: 100%;
-            border-collapse: collapse;
-            background: #1c1c22;
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.6);
-        }
-
-        .forum-table th {
-            background: #2a2a30;
-            color: #d4af37;
-            padding: 12px;
-            text-align: left;
-            font-weight: 700;
-        }
-
-        .forum-table td {
-            padding: 12px;
-            border-bottom: 1px solid #2f2f36;
-        }
-
-        .forum-table tr:hover {
-            background: #24242b;
-        }
-
-        .topic-link {
-            font-weight: 700;
-            font-size: 18px;
-            color: #d4af37;
-        }
-
-        .topic-desc {
-            font-size: 14px;
-            color: #aaa;
-            margin-top: 5px;
-        }
-
-        /* --- Футер --- */
-        footer {
-            text-align: center;
-            padding: 15px 0;
-            background: #1c1c22;
-            border-radius: 8px;
-            margin-top: 25px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.7);
-        }
-    </style>
+/* ----------------- Responsive ----------------- */
+@media (max-width: 768px) {
+    .header-container { flex-direction: column; gap: 10px; }
+    .header-left, .header-right { justify-content: center; margin-left: 0; }
+    .container { width: 95%; padding: 10px; flex-direction: column; }
+    .content-area { flex-direction: column; }
+}
+</style>
 </head>
-
 <body>
 <div class="container">
 
-    <header>
-        <div class="header-container">
-
-            <!-- ЛЕВО -->
-            <div>
-                {% if user.is_authenticated %}
-                    <a href="{% url 'profile' %}">
-                        {% if user.profile.avatar %}
-                            <img src="{{ user.profile.avatar.url }}" class="avatar">
-                        {% else %}
-                            <img src="/static/images/default_avatar.png" class="avatar">
-                        {% endif %}
-                    </a>
-                    <a href="{% url 'logout' %}" class="header-btn">Выйти</a>
-                {% else %}
-                    <a href="{% url 'login' %}" class="header-btn">Войти</a>
-                    <a href="{% url 'register' %}" class="header-btn">Регистрация</a>
-                {% endif %}
-            </div>
-
-            <!-- ПРАВО -->
-            <div>
-                <a href="{% url 'home' %}" class="header-btn">Главная</a>
-                <a href="{% url 'news' %}" class="header-btn">Новости</a>
-
-                <!-- base.html -->
-                {% if user.is_authenticated %}
-                    <a href="{% url 'create_topic_simple' %}" class="header-btn">Создать пост</a>
-                {% endif %}
-            </div>
-
+<header>
+    <div class="header-container">
+        <div class="header-left">
+            {% if user.is_authenticated %}
+                <a href="{% url 'profile' %}">
+                    {% if user.profile.avatar %}
+                        <img src="{{ user.profile.avatar.url }}" class="avatar">
+                    {% else %}
+                        <img src="{% static 'images/default_avatar.png' %}" class="avatar">
+                    {% endif %}
+                </a>
+                <a href="{% url 'logout' %}" class="header-btn pulse-button">Выйти</a>
+            {% else %}
+                <a href="{% url 'login' %}" class="header-btn pulse-button">Войти</a>
+                <a href="{% url 'register' %}" class="header-btn pulse-button">Регистрация</a>
+            {% endif %}
         </div>
 
-        <h1 class="logo">Gli Custodi</h1>
-    </header>
+        <div class="header-right">
+            {% if user.is_authenticated %}
+                <a href="{% url 'create_topic_simple' %}" class="header-btn pulse-button">Создать тему</a>
+            {% endif %}
+        </div>
+    </div>
+</header>
 
-    <main>
+<main class="content-area" style="display: flex; gap: 20px; align-items: flex-start;">
+    <div style="flex: 1;">
         {% block content %}{% endblock %}
-    </main>
+    </div>
 
-    <footer>
-        RP Forum Gli Custodi 2026
-        <br>
-        <a href="{% url 'terms' %}">Условия использования</a> |
-        <a href="{% url 'privacy' %}">Политика конфиденциальности</a>
-    </footer>
+    <div style="width: 160px; flex-shrink: 0;">
+        <table class="forum-table">
+            <tbody>
+                <tr><td style="padding: 12px; text-align: center;"><a href="{% url 'home' %}">Главная</a></td></tr>
+                <tr><td style="padding: 12px; text-align: center;"><a href="{% url 'news' %}">Новости</a></td></tr>
+                <tr><td style="padding: 12px; text-align: center;"><a href="{% url 'events' %}">Ивенты</a></td></tr>
+                <tr><td style="padding: 12px; text-align: center;"><span style="color: #888;">Другое</span></td></tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+
+<footer>
+    RP Forum Gli Custodi 2026
+    <br>
+    <a href="{% url 'terms' %}">Условия использования</a> |
+    <a href="{% url 'privacy' %}">Политика конфиденциальности</a>
+</footer>
 
 </div>
 </body>
