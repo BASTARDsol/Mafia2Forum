@@ -25,7 +25,15 @@ body {
 a { color: #d4af37; text-decoration: none; transition: 0.2s; }
 a:hover { color: #ffcc00; text-decoration: underline; }
 
-.container { flex: 1; display: flex; flex-direction: column; width: 950px; max-width: 95%; margin: 0 auto; padding: 20px; }
+.container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    width: 950px;
+    max-width: 95%;
+    margin: 0 auto;
+    padding: 20px;
+}
 
 /* ----------------- Header ----------------- */
 header {
@@ -43,8 +51,6 @@ header {
     text-decoration: none; transition: all 0.3s ease; white-space: nowrap;
 }
 .header-btn:hover { background-color: #c19b2e; transform: scale(1.05); box-shadow: 0 0 10px #d4af37; }
-
-.logo { font-family: 'Merriweather', serif; font-size: 42px; color: #d4af37; margin: 10px 0; letter-spacing: 2px; text-align: center; }
 
 /* ----------------- Avatar ----------------- */
 .avatar {
@@ -72,18 +78,18 @@ header {
 }
 
 /* ----------------- Forms ----------------- */
-input, textarea, select, button {
-    width: 100%; padding: 12px; margin-bottom: 12px; border-radius: 6px; border: none; font-family: 'Open Sans', sans-serif; font-size: 14px;
-}
 input, textarea, select {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 12px;
+    border-radius: 6px;
+    border: none;
+    font-family: 'Open Sans', sans-serif;
+    font-size: 14px;
     background: #2a2a30;
     color: #f5e6c4;
 }
-
-/* УБИРАЕМ РАСТЯГИВАНИЕ TEXTAREA */
-textarea {
-    resize: none;
-}
+textarea { resize: none; }
 
 textarea:focus, input:focus, select:focus {
     outline: none;
@@ -92,9 +98,21 @@ textarea:focus, input:focus, select:focus {
 }
 
 button {
-    background-color: #d4af37; color: #0d0d10; font-weight: 700; cursor: pointer; transition: all 0.3s ease;
+    padding: 12px;
+    margin-bottom: 12px;
+    border-radius: 6px;
+    border: none;
+    font-family: 'Open Sans', sans-serif;
+    font-size: 14px;
+
+    background-color: #d4af37;
+    color: #0d0d10;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
 }
 button:hover { background-color: #c19b2e; transform: scale(1.05); box-shadow: 0 0 10px #d4af37; }
+form button { width: 100%; }
 
 /* ----------------- Headings ----------------- */
 h2.page-title { font-family: 'Merriweather', serif; font-size: 32px; margin-bottom: 20px; border-bottom: 1px solid #d4af37; padding-bottom: 10px; }
@@ -107,11 +125,19 @@ footer {
 
 /* ----------------- Forum Table ----------------- */
 .forum-table { width: 100%; border-collapse: collapse; background: #1c1c22; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.6); }
-.forum-table th { background: #2a2a30; color: #d4af37; padding: 12px; text-align: left; font-weight: 700; }
-.forum-table td { padding: 12px; border-bottom: 1px solid #2f2f36; }
+.forum-table td { padding: 12px; border-bottom: 1px solid #2f2f36; text-align:center; }
 .forum-table tr:hover { background: #24242b; }
-.topic-link { font-weight: 700; font-size: 18px; color: #d4af37; }
-.topic-desc { font-size: 14px; color: #aaa; margin-top: 5px; }
+
+/* ----------------- Layout main+sidebar ----------------- */
+.content-area { display: flex; gap: 20px; align-items: flex-start; }
+.content-main{ flex: 1; min-width: 0; }
+
+.content-sidebar{
+    width: 220px;
+    flex: 0 0 220px;
+    position: sticky;
+    top: 20px;
+}
 
 /* ----------------- Responsive ----------------- */
 @media (max-width: 768px) {
@@ -119,9 +145,11 @@ footer {
     .header-left, .header-right { justify-content: center; margin-left: 0; }
     .container { width: 95%; padding: 10px; flex-direction: column; }
     .content-area { flex-direction: column; }
+    .content-sidebar{ width: 100%; flex: 0 0 auto; position: static; top: auto; }
 }
 </style>
 </head>
+
 <body>
 <div class="container">
 
@@ -131,9 +159,9 @@ footer {
             {% if user.is_authenticated %}
                 <a href="{% url 'profile' %}">
                     {% if user.profile.avatar %}
-                        <img src="{{ user.profile.avatar.url }}" class="avatar">
+                        <img src="{{ user.profile.avatar.url }}" class="avatar" alt="">
                     {% else %}
-                        <img src="{% static 'images/default_avatar.png' %}" class="avatar">
+                        <img src="{% static user.profile.default_avatar %}" class="avatar" alt="">
                     {% endif %}
                 </a>
                 <a href="{% url 'logout' %}" class="header-btn pulse-button">Выйти</a>
@@ -151,21 +179,25 @@ footer {
     </div>
 </header>
 
-<main class="content-area" style="display: flex; gap: 20px; align-items: flex-start;">
-    <div style="flex: 1;">
+<main class="content-area">
+    <div class="content-main">
         {% block content %}{% endblock %}
     </div>
 
-    <div style="width: 160px; flex-shrink: 0;">
-        <table class="forum-table">
-            <tbody>
-                <tr><td style="padding: 12px; text-align: center;"><a href="{% url 'home' %}">Главная</a></td></tr>
-                <tr><td style="padding: 12px; text-align: center;"><a href="{% url 'news' %}">Новости</a></td></tr>
-                <tr><td style="padding: 12px; text-align: center;"><a href="{% url 'events' %}">Ивенты</a></td></tr>
-                <tr><td style="padding: 12px; text-align: center;"><span style="color: #888;">Другое</span></td></tr>
-            </tbody>
-        </table>
-    </div>
+    {% with name=request.resolver_match.url_name %}
+        {% if name != 'login' and name != 'register' and name != 'change-password' %}
+        <div class="content-sidebar">
+            <table class="forum-table">
+                <tbody>
+                    <tr><td><a href="{% url 'home' %}">Главная</a></td></tr>
+                    <tr><td><a href="{% url 'news' %}">Новости</a></td></tr>
+                    <tr><td><a href="{% url 'events' %}">Ивенты</a></td></tr>
+                    <tr><td><span style="color:#888;">Другое</span></td></tr>
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    {% endwith %}
 </main>
 
 <footer>

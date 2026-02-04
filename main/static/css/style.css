@@ -1,192 +1,568 @@
 /* ==============================================
-   TOPIC DETAIL
+   TOPIC DETAIL - VK Dark Style
    ============================================== */
 
-.topic-container {
-    max-width: 900px;
-    margin: 0 auto;
-    padding: 20px;
-}
-
-/* ---------- Заголовок темы ---------- */
-.topic-title {
-    font-size: 34px;
-    margin-bottom: 18px;
-    font-family: 'Merriweather', serif;
-    color: #d4af37;
-    text-shadow: 0 0 6px rgba(212,175,55,0.25);
-}
-
-/* ---------- Картинка темы ---------- */
-.topic-image img {
-    width: 100%;
-    max-width: 620px;
-    height: auto;
-    display: block;
-    margin: 0 auto 18px;
-    border-radius: 14px;
-    box-shadow: 0 6px 14px rgba(0,0,0,0.6);
-}
-
-/* ---------- Метаданные ---------- */
-.topic-meta {
-    background: #15151a;
-    padding: 12px 14px;
-    border-radius: 10px;
-    color: #9a9a9a;
-    font-size: 14px;
-    margin-bottom: 18px;
-    border-left: 3px solid #d4af37;
-}
-
-/* ---------- Описание ---------- */
-.topic-description {
-    background: #17171c;
-    padding: 14px;
-    border-radius: 10px;
-    margin-bottom: 25px;
-    line-height: 1.6;
-    box-shadow: inset 0 0 8px rgba(0,0,0,0.4);
-}
-
-/* ---------- Контейнер постов ---------- */
-.posts-container {
-    display: flex;
-    flex-direction: column;
-    gap: 18px;
-}
-
-/* ---------- Карточка поста ---------- */
-.post-card {
-    background: linear-gradient(145deg, #1c1c22, #23232b);
-    border-radius: 12px;
-    padding: 14px 16px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.55);
-    transition: 0.25s;
-}
-
-.post-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 18px rgba(0,0,0,0.7);
-}
-
-/* ---------- Текст поста ---------- */
-.post-text {
-    line-height: 1.5;
-    word-wrap: break-word;
-    font-size: 15px;
-    color: #e8e8e8;
-}
-
-/* ---------- Картинка поста ---------- */
-.post-image img {
-    max-width: 100%;
-    height: auto;
-    border-radius: 10px;
-    margin-top: 10px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-}
-
-/* ---------- Действия ---------- */
-.post-actions {
-    display: flex;
-    gap: 16px;
-    margin-top: 10px;
-    flex-wrap: wrap;
-    align-items: center;
-}
-
-/* ---------- Лайк ---------- */
-.btn-like {
-    background: none;
-    border: none;
-    color: #c9c9c9;
-    cursor: pointer;
-    font-size: 14px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 0;
-    transition: 0.2s;
-}
-
-.btn-like:hover {
-    color: #ff6b6b;
-    transform: scale(1.08);
-}
-
-/* ---------- Удаление ---------- */
-.btn-delete-comment {
-    background: none;
-    border: none;
-    color: #f55;
-    cursor: pointer;
-    font-size: 13px;
-    padding: 0;
-    transition: 0.2s;
-}
-
-.btn-delete-comment:hover {
-    color: #ff2a2a;
+.topic-container{
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  background: transparent;
 }
 
 /* ==============================================
-   REPLIES
+   VK TOPIC CARD
    ============================================== */
 
-.reply-card {
-    margin-left: 35px;
-    margin-top: 10px;
-    background: #26262f;
-    padding: 8px 12px;
-    border-radius: 10px;
-    font-size: 0.9rem;
-    border-left: 2px solid #d4af37;
+.vk-card{
+  background:#242526;
+  border-radius:14px;
+  padding:14px 16px;
+  margin-bottom:18px;
+  box-shadow:0 1px 3px rgba(0,0,0,.35);
 }
 
-.reply-actions {
-    display: flex;
-    gap: 10px;
-    margin-top: 6px;
+.vk-head{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  margin-bottom:10px;
 }
 
-/* ---------- Форма ответа ---------- */
-.reply-form textarea {
-    width: 100%;
-    resize: none;           /* УБИРАЕТ ТРЕУГОЛЬНИК */
-    margin-top: 6px;
-    background: #2a2a30;
-    color: #f0f0f0;
-    border: none;
-    border-radius: 8px;
-    padding: 10px;
-    min-height: 70px;
-    max-height: 160px;
+.vk-head-meta{
+  display:flex;
+  flex-direction:column;
+  line-height:1.1;
 }
 
-/* ---------- Скрытие ---------- */
-.hidden {
-    display: none;
+.vk-author{ font-weight:700; color:#e4e6eb; }
+.vk-time{ font-size:12px; color:#606770; margin-top:2px; }
+
+.vk-title{
+  font-size:22px;
+  font-weight:800;
+  color:#d4af37;
+  margin:6px 0 10px;
+}
+
+/* Обрезка текста темы */
+.js-collapsible[data-collapsed="1"] .vk-text-inner{
+  max-height:140px;
+  overflow:hidden;
+  position:relative;
+}
+
+.js-collapsible[data-collapsed="1"] .vk-text-inner::after{
+  content:"";
+  position:absolute;
+  left:0;
+  right:0;
+  bottom:0;
+  height:46px;
+  background:linear-gradient(to bottom, rgba(36,37,38,0), rgba(36,37,38,1));
+}
+
+.vk-showmore{
+  background:none;
+  border:none;
+  color:#d4af37;
+  cursor:pointer;
+  margin-top:6px;
+  padding:0;
+  font-weight:700;
+}
+
+.vk-media img{
+  width:100%;
+  border-radius:12px;
+  margin-top:10px;
+  display:block;
+}
+
+/* ===== FIX: ровные actions (❤️ и 💬) ===== */
+.vk-actions{
+  display:flex;
+  gap:12px;
+  margin-top:12px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+
+.vk-action{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  height:38px;
+  padding:0 12px;
+  border-radius:10px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.10);
+  color:#e4e6eb;
+  line-height:1;
+  font-weight:800;
+  user-select:none;
+}
+
+.vk-action .vk-ico{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  font-size:16px;
+  line-height:1;
+}
+
+.vk-action .vk-count{
+  font-size:14px;
+  line-height:1;
+}
+
+.vk-like-btn{
+  cursor:pointer;
+}
+
+.vk-actions .vk-like-btn {
+    margin-top: 12px; /* Настроить значение, если нужно больше/меньше */
+}
+
+.vk-like-btn:hover{
+  border-color: rgba(212,175,55,0.8);
+  box-shadow: 0 0 10px rgba(212,175,55,0.15);
+}
+
+.vk-comment-counter{
+  cursor: default;
+}
+
+.is-disabled{
+  opacity:0.6;
+  cursor:not-allowed;
+}
+
+/* delete topic button */
+.delete-topic-btn{
+  width:auto;
+  display:inline-block;
 }
 
 /* ==============================================
-   АДАПТИВ
+   POSTS
    ============================================== */
 
-@media (max-width: 768px) {
-    .topic-container {
-        padding: 12px;
-    }
-
-    .reply-card {
-        margin-left: 15px;
-    }
-
-    .post-actions {
-        flex-wrap: wrap;
-    }
-
-    .topic-title {
-        font-size: 26px;
-    }
+.posts-container{
+  display:flex;
+  flex-direction:column;
+  gap:18px;
 }
+
+.post-card{
+  background:#242526;
+  color:#e4e6eb;
+  border-radius:12px;
+  padding:14px 16px;
+  box-shadow:0 1px 3px rgba(0,0,0,0.3);
+  transition:0.25s;
+}
+
+.post-card:hover{
+  box-shadow:0 4px 12px rgba(0,0,0,0.15);
+  transform: translateY(-2px);
+}
+
+.post-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:10px;
+}
+
+.post-user{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.user-info strong{ font-size:14px; }
+.user-info .post-date{ font-size:12px; color:#606770; }
+
+.topic-container .avatar{
+  width:40px;
+  height:40px;
+  border-radius:50%;
+  object-fit:cover;
+  background:#3a3b3c;
+}
+
+.post-content{
+  font-size:14px;
+  line-height:1.5;
+  margin-bottom:10px;
+  word-wrap:break-word;
+}
+
+.post-image img{
+  max-width:100%;
+  border-radius:10px;
+  margin-top:10px;
+}
+
+/* ===== FIX: ровные post-actions ===== */
+.post-actions{
+  display:flex;
+  gap:12px;
+  font-size:13px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+
+.post-actions .action-btn{
+  height:36px;
+  padding:0 12px;
+  border-radius:10px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.10);
+  color:#e4e6eb;
+  cursor:pointer;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  line-height:1;
+  font-weight:800;
+}
+
+.post-actions .action-btn:hover{
+  border-color: rgba(212,175,55,0.8);
+  box-shadow: 0 0 10px rgba(212,175,55,0.12);
+}
+
+.post-actions .action-btn.is-disabled{
+  opacity:0.6;
+  cursor:not-allowed;
+}
+
+/* ==============================================
+   COMMENTS
+   ============================================== */
+
+.comment-card{
+  background:#242526;
+  border-radius:10px;
+  padding:12px;
+  margin-bottom:10px;
+  transition: background 0.2s;
+}
+
+.comment-card:hover{
+  background:#2a2a2d;
+}
+
+.comment-header{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  margin-bottom:6px;
+}
+
+.comment-meta{
+  display:flex;
+  flex-direction:column;
+}
+
+.comment-author{
+  font-size:13px;
+  font-weight:700;
+}
+
+.comment-date{
+  font-size:12px;
+  color:#606770;
+}
+
+.comment-text{
+  font-size:13px;
+  line-height:1.4;
+}
+
+.reply-image{
+  max-width:100%;
+  border-radius:8px;
+  margin-top:6px;
+}
+
+/* actions */
+.comment-actions{
+  margin-top:10px;
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+
+.inline-form{ display:inline; margin:0; }
+.danger-btn{ background:#7a1f1f !important; }
+
+/* link-style reply button */
+.comment-reply-toggle{
+  width:auto;
+  background:none;
+  border:none;
+  cursor:pointer;
+  padding:0;
+  color:#d4af37;
+  font-weight:800;
+}
+.comment-reply-toggle:hover{ text-decoration:underline; }
+
+/* =========================================================
+   FINAL OVERRIDES: replies "[" + no glow on line
+   + only card hover glow + cut line on last reply
+   + comments preview
+   ========================================================= */
+
+.comment-wrap{ position: relative; }
+
+/* контейнер ветки ответов */
+.replies-container{
+  margin-left: 26px !important;
+  padding-left: 16px !important;
+  margin-top: 8px;
+  position: relative;
+
+  --thread-line: #606770;
+}
+
+/* вертикальная линия */
+.replies-container::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--thread-line);
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+/* горизонтальная скобка */
+.replies-container .comment-card{
+  position: relative;
+}
+
+.replies-container .comment-card::before {
+  content: "";
+  position: absolute;
+  left: -16px; /* Сдвиг влево */
+  top: 50%;
+  transform: translateY(-5%); /* Центрирование по вертикали */
+  width: 16px;
+  height: 2px;
+  background: var(--thread-line);
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+/* подсветка ТОЛЬКО текущей карточки */
+.replies-container .comment-card:hover{
+  --thread-line: #d4af37;
+}
+
+/* обрыв линии на последнем reply */
+.replies-container {
+  position: relative;
+  margin-left: 26px; /* Сдвиг вправо */
+  padding-left: 16px;
+  margin-top: 8px;
+  --thread-line: #606770; /* Цвет линии */
+}
+
+.replies-container > .comment-wrap:last-child::after{
+  content:"";
+  position:absolute;
+  left: 0;
+  top: 26px;
+  bottom: 0;
+  width: 2px;
+  background: #242526;
+  pointer-events:none;
+}
+
+/* COMMENTS PREVIEW */
+.comments-preview{
+  position: relative;
+  margin-top: 16px;
+}
+
+.comments-inner{
+  position: relative;
+  max-height: 140px;
+  overflow: hidden;
+}
+
+.js-comments-collapsed .comments-inner::after{
+  content:"";
+  position:absolute;
+  left:0;
+  right:0;
+  bottom:0;
+  height:60px;
+  background: linear-gradient(to bottom, rgba(36,37,38,0), rgba(36,37,38,1));
+}
+
+.comments-showmore{
+  margin-top: 10px;
+  background: none;
+  border: none;
+  color: #d4af37;
+  font-weight: 800;
+  cursor: pointer;
+  padding: 0;
+}
+.comments-showmore:hover{ text-decoration: underline; }
+
+.js-comments-expanded .comments-inner{
+  max-height: none;
+  overflow: visible;
+}
+.js-comments-expanded .comments-inner::after{ display:none; }
+
+/* reply form */
+.reply-form{
+  margin-top:10px;
+  padding:10px;
+  border-radius:10px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+/* =========================================================
+   MEDIA attach: 📎 inside textarea (right-bottom)
+   ========================================================= */
+
+.media-row{
+  position: relative;
+  display:block;
+}
+
+.reply-textarea{
+  width: 100%;
+  resize: none;
+  background: #3a3b3c;
+  color: #e4e6eb;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 48px 12px 12px; /* место справа под 📎 */
+  min-height: 90px;
+  box-sizing: border-box;
+}
+
+/* прячем стандартный input file */
+.media-file-input{
+  position:absolute;
+  left:-9999px;
+  width:1px;
+  height:1px;
+  opacity:0;
+}
+
+/* 📎 в правом нижнем углу textarea */
+.media-icon-btn{
+  position:absolute;
+  right: 10px;
+  bottom: 30px;
+
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+
+  cursor:pointer;
+  user-select:none;
+
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.10);
+}
+
+.media-icon-btn:hover{
+  border-color: rgba(212,175,55,0.8);
+  box-shadow: 0 0 10px rgba(212,175,55,0.25);
+}
+
+/* preview */
+.media-preview{
+  position: relative;
+  margin-top: 10px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+.media-preview-img{
+  width: 100%;
+  display: block;
+  border-radius: 12px;
+}
+
+/* удалить (крестик ровно по центру) */
+.media-remove-btn{
+  position: absolute;
+  top: 8px;
+  right: 8px;
+
+  width: 28px;
+  height: 28px;
+  border-radius: 10px;
+
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+  background: rgba(0,0,0,0.55) !important;
+  color: #fff !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  line-height: 1 !important;
+  font-size: 16px !important;
+  font-weight: 800 !important;
+
+  cursor: pointer;
+  box-shadow: none !important;
+  transform: none !important;
+}
+.media-remove-btn:hover{
+  background: rgba(0,0,0,0.75) !important;
+}
+
+/* reply button */
+.reply-btn{
+  margin-top:10px;
+  width:auto;
+  background:#d4af37;
+  color:#0d0d10;
+  border:none;
+  border-radius:10px;
+  padding:10px 16px;
+  cursor:pointer;
+  font-weight:900;
+}
+.reply-btn:hover{
+  filter: brightness(1.05);
+}
+
+/* footer */
+footer{ margin-top: 40px; }
+
+/* mobile */
+@media (max-width: 768px){
+  .replies-container{
+    margin-left: 16px !important;
+    padding-left: 12px !important;
+  }
+  .replies-container .comment-card::before{
+    left: -12px;
+    width: 12px;
+  }
+}
+

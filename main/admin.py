@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import CustomUser, Profile, Topic, Post
+
+from .models import CustomUser, Profile, Category, Topic, Post, Comment
 
 
 @admin.register(CustomUser)
@@ -14,7 +15,16 @@ class CustomUserAdmin(UserAdmin):
         ('Форум', {'fields': ('is_forum_admin',)}),
     )
 
+
+@admin.register(Category)
+class CategoryAdmin(admin.ModelAdmin):
+    list_display = ("name", "slug")
+    search_fields = ("name", "slug")
+    prepopulated_fields = {"slug": ("name",)}  # slug сам будет заполняться от name
+
+
 # Регистрация остальных моделей
 admin.site.register(Profile)
 admin.site.register(Topic)
 admin.site.register(Post)
+admin.site.register(Comment)

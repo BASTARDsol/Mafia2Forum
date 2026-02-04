@@ -1,64 +1,42 @@
-from django.urls import path
 from django.conf import settings
 from django.conf.urls.static import static
+from django.urls import path
+
 from . import views
 
-# Чтобы сервер не падал, добавляем заглушки для отсутствующих функций
-# Ты позже можешь заменить их на настоящие реализации
-def placeholder(request, *args, **kwargs):
-    from django.http import HttpResponse
-    return HttpResponse("Здесь будет ваша функция.")
-
 urlpatterns = [
-    # Главная страница
-    path('', getattr(views, 'home', placeholder), name='home'),
+    path("", views.home, name="home"),
+    path("news/", views.news, name="news"),
+    path("events/", views.events, name="events"),
 
-    # Новости
-    path('news/', getattr(views, 'news', placeholder), name='news'),
+    path("login/", views.login_view, name="login"),
+    path("logout/", views.logout_view, name="logout"),
+    path("register/", views.register_view, name="register"),
 
-    # Ивенты
-    path('events/', getattr(views, 'events', placeholder), name='events'),
+    path("profile/", views.profile_view, name="profile"),
+    path("profile/edit/", views.profile_edit_view, name="profile_edit"),
+    path("profile/change-password/", views.change_password_view, name="change-password"),
 
-    # Вход, выход, регистрация
-    path('login/', getattr(views, 'login_view', placeholder), name='login'),
-    path('logout/', getattr(views, 'logout_view', placeholder), name='logout'),
-    path('register/', getattr(views, 'register_view', placeholder), name='register'),
+    path("topic/<int:topic_id>/", views.topic_detail, name="topic-detail"),
+    path("topic/create/", views.create_topic_simple, name="create_topic_simple"),
+    path("topic/<int:pk>/delete/", views.topic_delete, name="topic-delete"),
 
-    # Профиль
-    path('profile/', getattr(views, 'profile_view', placeholder), name='profile'),
-    path('profile/edit/', getattr(views, 'profile_edit_view', placeholder), name='profile-edit'),
-    path('profile/change-password/', getattr(views, 'change_password_view', placeholder), name='change-password'),
+    path("post/<int:post_id>/reply/", views.add_reply, name="add-reply"),
+    path("post/<int:post_id>/delete/", views.delete_post, name="delete-post"),
 
-    # Просмотр темы
-    path('topic/<int:topic_id>/', getattr(views, 'topic_detail', placeholder), name='topic-detail'),
+    path("terms/", views.terms, name="terms"),
+    path("privacy/", views.privacy, name="privacy"),
 
-    # Создание темы
-    path('topic/create/', getattr(views, 'create_topic_simple', placeholder), name='create_topic_simple'),
+    # лайки темы/поста (у тебя уже было)
+    path("toggle_post_like/<int:post_id>/", views.toggle_post_like, name="toggle-post-like"),
+    path("toggle_topic_like/<int:topic_id>/", views.toggle_topic_like, name="toggle-topic-like"),
 
-    # Удаление темы
-    path('topic/<int:pk>/delete/', getattr(views, 'topic_delete', placeholder), name='topic-delete'),
+    # ✅ НОВОЕ: лайк коммента
+    path("toggle_comment_like/<int:comment_id>/", views.toggle_comment_like, name="toggle-comment-like"),
 
-    # Ответ на пост
-    path('post/<int:post_id>/reply/', getattr(views, 'add_reply', placeholder), name='add-reply'),
-
-    # Лайк поста
-    path('post/<int:post_id>/like/', getattr(views, 'like_post', placeholder), name='like_post'),
-
-    # Форум (список разделов)
-    path('forum/', getattr(views, 'forum_list', placeholder), name='forum_list'),
-
-    # Условия и политика
-    path('terms/', getattr(views, 'terms', placeholder), name='terms'),
-    path('privacy/', getattr(views, 'privacy', placeholder), name='privacy'),
-
-    # Удаление поста
-    path('post/<int:post_id>/delete/', getattr(views, 'delete_post', placeholder), name='delete-post'),
-
-    # Реакции
-    path('post/<int:post_id>/react/', getattr(views, 'react_post', placeholder), name='react_post'),
-    path('comment/<int:comment_id>/react/', getattr(views, 'react_comment', placeholder), name='react_comment'),
+    # ✅ НОВОЕ: удаление коммента
+    path("comment/<int:comment_id>/delete/", views.delete_comment, name="comment-delete"),
 ]
 
-# Подключение медиа-файлов в режиме разработки
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -4,29 +4,32 @@
 {% block content %}
 <h2 class="page-title">Профиль пользователя</h2>
 
-<div class="profile-container" style="display:flex; gap: 40px; margin-top:20px;">
+<div style="display:flex; gap:40px; align-items:flex-start;">
 
-    <!-- Левая колонка: Аватар и кнопки -->
-    <div class="profile-left" style="width:250px; text-align:center;">
-        {% if user.profile.avatar %}
-            <img src="{{ user.profile.avatar.url }}" alt="Avatar" style="width:200px; height:200px; border-radius:50%; object-fit:cover; border:2px solid #ccc;">
-        {% else %}
-            <img src="{% static 'default-avatar.png' %}" alt="Avatar" style="width:200px; height:200px; border-radius:50%; object-fit:cover; border:2px solid #ccc;">
-        {% endif %}
+  <div style="width:250px; text-align:center;">
+    {% if user_obj.profile.avatar %}
+      <img src="{{ user_obj.profile.avatar.url }}" class="avatar"
+           style="width:160px; height:160px; margin-bottom:15px;">
+    {% else %}
+      <img src="{% static user_obj.profile.default_avatar %}" class="avatar"
+           style="width:160px; height:160px; margin-bottom:15px;">
+    {% endif %}
 
-        <div style="margin-top:15px;">
-            <a href="{% url 'profile-edit' %}" class="btn" style="padding:10px 20px; background:#d4af37; color:#0d0d10; border-radius:8px; text-decoration:none; display:block; margin-bottom:5px;">Редактировать профиль</a>
-            <a href="{% url 'logout' %}" class="btn" style="padding:10px 20px; background:#c19b2e; color:#0d0d10; border-radius:8px; text-decoration:none; display:block;">Выйти</a>
-        </div>
-    </div>
+    <a href="{% url 'profile_edit' %}" class="header-btn" style="display:block; margin-bottom:10px;">
+      Редактировать профиль
+    </a>
 
-    <!-- Правая колонка: Информация о пользователе -->
-    <div class="profile-right" style="flex:1;">
-        <div class="card">
-            <h3>{{ user.username }}</h3>
-            <p><strong>Дата регистрации:</strong> {{ user.date_joined|date:"d M Y" }}</p>
-        </div>
-    </div>
+    <a href="{% url 'logout' %}" class="header-btn">
+      Выйти
+    </a>
+  </div>
+
+  <div class="card" style="flex:1;">
+    <h3 style="margin-top:0;">{{ user_obj.username }}</h3>
+    <p style="color:#aaa; margin-top:10px;">
+      Дата регистрации: {{ user_obj.date_joined|date:"d M Y" }}
+    </p>
+  </div>
 
 </div>
 {% endblock %}

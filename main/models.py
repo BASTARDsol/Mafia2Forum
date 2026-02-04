@@ -1,15 +1,15 @@
 import os
-from django.db import models
-from django.contrib.auth.models import AbstractUser, Group, Permission
-from django.conf import settings
-from django.dispatch import receiver
-from django.db.models.signals import post_save
+import random
 
-# ------------------------
-# Кастомный пользователь
-# ------------------------
+from django.conf import settings
+from django.contrib.auth.models import AbstractUser, Group, Permission
+from django.db import models
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+
 class CustomUser(AbstractUser):
-    is_forum_admin = models.BooleanField(default=False)  # админ форума
+    is_forum_admin = models.BooleanField(default=False)
 
     groups = models.ManyToManyField(
         Group,
@@ -30,14 +30,27 @@ class CustomUser(AbstractUser):
         return self.username
 
 
-# ------------------------
-# Профиль пользователя с аватаром
-# ------------------------
+DEFAULT_AVATARS = [
+    "images/avatar1.png",
+    "images/avatar2.png",
+    "images/avatar3.png",
+    "images/avatar4.png",
+]
+
+
 class Profile(models.Model):
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE)
     avatar = models.ImageField(upload_to='avatars/', blank=True, null=True)
 
+    default_avatar = models.CharField(
+        max_length=64,
+        blank=True,
+        default="",
+        help_text="Static path like images/avatar1.png"
+    )
+
     def save(self, *args, **kwargs):
+        # если загружают новый аватар — удаляем старый файл
         try:
             this = Profile.objects.get(id=self.id)
             if this.avatar != self.avatar and this.avatar:
@@ -46,134 +59,139 @@ class Profile(models.Model):
                     os.remove(old_avatar_path)
         except Profile.DoesNotExist:
             pass
-        super(Profile, self).save(*args, **kwargs)
+
+        # гарантируем дефолт если нет загруженного аватара
+        if not self.avatar and not self.default_avatar:
+            self.default_avatar = random.choice(DEFAULT_AVATARS)
+
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Profile({self.user.username})"
 
 
 @receiver(post_save, sender=CustomUser)
 def create_or_save_user_profile(sender, instance, created, **kwargs):
     if created:
-        Profile.objects.create(user=instance)
+        Profile.objects.create(
+            user=instance,
+            default_avatar=random.choice(DEFAULT_AVATARS)
+        )
     else:
-        instance.profile.save()
+        Profile.objects.get_or_create(user=instance)
 
 
-# ------------------------
-# Форум
-# ------------------------
-class Forum(models.Model):
-    name = models.CharField(max_length=100)
-    description = models.TextField(blank=True, null=True)
+# ---------------------------
+# КАТЕГОРИИ (обязательные для Topic)
+# ---------------------------
+
+class Category(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    slug = models.SlugField(max_length=120, unique=True)
+
+    class Meta:
+        verbose_name = "Категория"
+        verbose_name_plural = "Категории"
+        ordering = ["name"]
 
     def __str__(self):
         return self.name
 
 
-# ------------------------
-# Категории для темы
-# ------------------------
-CATEGORY_CHOICES = [
-    ('Главная', 'Главная'),
-    ('Новости', 'Новости'),
-    ('Ивенты', 'Ивенты'),
-    ('Другое', 'Другое'),
-]
-
-# ------------------------
-# Тема форума
-# ------------------------
 class Topic(models.Model):
-    forum = models.ForeignKey(
-        Forum,
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='topics',
-        null=True,
-        blank=True
+        related_name="topics"
     )
-    title = models.CharField(max_length=200)
+
+    # ✅ обязательная категория
+    category = models.ForeignKey(
+        Category,
+        on_delete=models.PROTECT,     # нельзя удалить категорию, если есть темы
+        related_name="topics"
+    )
+
+    title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
-    category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, default='Другое')
-    author = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="topics")
+    image = models.ImageField(upload_to="topics/", blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    image = models.ImageField(upload_to='topic_images/', blank=True, null=True)
+
+    likes = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        blank=True,
+        related_name="liked_topics"
+    )
+
+    class Meta:
+        ordering = ["-created_at"]
 
     def __str__(self):
         return self.title
 
 
-# ------------------------
-# Пост внутри темы
-# ------------------------
 class Post(models.Model):
-    topic = models.ForeignKey(Topic, on_delete=models.CASCADE, related_name='posts')
-    author = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    topic = models.ForeignKey(Topic, on_delete=models.CASCADE, related_name="posts")
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="posts")
     content = models.TextField()
-    image = models.ImageField(upload_to='posts/', blank=True, null=True)
+    image = models.ImageField(upload_to="posts/", blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
-    # Вложенные ответы
+    likes = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name="liked_posts")
+
+    class Meta:
+        ordering = ["created_at"]
+
+    def __str__(self):
+        return f"Post #{self.id}"
+
+
+class Comment(models.Model):
+    """
+    Один комментарий может быть:
+    - к теме (topic)
+    - или к посту (post)
+    """
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="comments")
+
+    topic = models.ForeignKey(Topic, on_delete=models.CASCADE, related_name="comments", null=True, blank=True)
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name="comments", null=True, blank=True)
+
     parent = models.ForeignKey(
-        'self',
+        "self",
+        on_delete=models.CASCADE,
         null=True,
         blank=True,
-        on_delete=models.CASCADE,
-        related_name='replies'
+        related_name="replies"
     )
 
-    # Лайки через ManyToMany
-    likes = models.ManyToManyField(CustomUser, blank=True, related_name='liked_posts')
-
-    def __str__(self):
-        return f"{self.author.username}: {self.content[:20]}"
-
-    def total_likes(self):
-        return self.likes.count()
-
-
-# ------------------------
-# Комментарии к теме
-# ------------------------
-class Comment(models.Model):
-    topic = models.ForeignKey(Topic, on_delete=models.CASCADE, related_name="comments")
-    author = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="comments")
     content = models.TextField()
-    image = models.ImageField(upload_to='comments/', blank=True, null=True)
+    image = models.ImageField(upload_to="comments/", blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
-    # Для сортировки по дате
     class Meta:
-        ordering = ['created_at']
+        ordering = ["created_at"]
 
     def __str__(self):
-        return f"{self.author.username} - {self.topic.title[:20]}"
+        return f"Comment #{self.id}"
 
-    def likes_count(self):
-        return self.reactions.filter(reaction_type='like').count()
-
-    def dislikes_count(self):
-        return self.reactions.filter(reaction_type='dislike').count()
-
-
-# ------------------------
-# Реакции (лайк/дизлайк)
-# ------------------------
-REACTION_CHOICES = [
-    ('like', 'Like'),
-    ('dislike', 'Dislike'),
-]
-
-class PostReaction(models.Model):
-    post = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='reactions')
-    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
-    reaction_type = models.CharField(max_length=7, choices=REACTION_CHOICES)
-
-    class Meta:
-        unique_together = ('post', 'user')
+    @property
+    def likes_count(self) -> int:
+        return self.reactions.filter(reaction_type="like").count()
 
 
 class CommentReaction(models.Model):
-    comment = models.ForeignKey(Comment, on_delete=models.CASCADE, related_name='reactions')
-    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
-    reaction_type = models.CharField(max_length=7, choices=REACTION_CHOICES)
+    REACTION_CHOICES = (
+        ("like", "Like"),
+    )
+
+    comment = models.ForeignKey(Comment, on_delete=models.CASCADE, related_name="reactions")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="comment_reactions")
+    reaction_type = models.CharField(max_length=16, choices=REACTION_CHOICES)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ('comment', 'user')
+        unique_together = ("comment", "user", "reaction_type")
+
+    def __str__(self):
+        return f"{self.user} {self.reaction_type} comment#{self.comment_id}"

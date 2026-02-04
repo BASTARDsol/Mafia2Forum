@@ -1,5 +1,5 @@
 {% extends 'main/base.html' %}
-{% load static %}  {# <- вот это нужно для тегов static #}
+{% load static %}
 
 {% block content %}
 <h2 class="page-title">Последние темы</h2>
@@ -15,7 +15,7 @@
                     {% if topic.author.profile.avatar %}
                         <img src="{{ topic.author.profile.avatar.url }}" alt="Avatar" class="avatar" style="width:45px; height:45px;">
                     {% else %}
-                        <img src="{% static 'images/default_avatar.png' %}" alt="Avatar" class="avatar" style="width:45px; height:45px;">
+                        <img src="{% static topic.author.profile.default_avatar %}" alt="Avatar" class="avatar" style="width:45px; height:45px;">
                     {% endif %}
                     <div style="margin-top:5px; font-size:12px; font-weight:600; color:#f5e6c4;">
                         {{ topic.author.username }}

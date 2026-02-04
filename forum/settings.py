@@ -116,5 +116,5 @@ LOGOUT_REDIRECT_URL = 'home'     # куда перенаправлять пос�
 # -----------------------
 
 # Статические файлы и шаблоны
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 AUTH_USER_MODEL = 'main.CustomUser'

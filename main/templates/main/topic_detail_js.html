@@ -1,0 +1,195 @@
+<script>
+(function () {
+  // ===== CSRF =====
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== "") {
+      const cookies = document.cookie.split(";");
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + "=")) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+  const csrftoken = getCookie("csrftoken");
+
+  // ===== ТЕКСТ ТЕМЫ: показать ещё =====
+  document.querySelectorAll(".js-collapsible").forEach((box) => {
+    const btn = box.querySelector(".vk-showmore");
+    if (!btn) return;
+
+    btn.addEventListener("click", () => {
+      const collapsed = box.getAttribute("data-collapsed") === "1";
+      box.setAttribute("data-collapsed", collapsed ? "0" : "1");
+      btn.textContent = collapsed ? "Скрыть" : "Показать ещё";
+    });
+  });
+
+  // ===== КОММЕНТЫ: превью + развернуть/свернуть =====
+  document.querySelectorAll(".comments-preview").forEach((block) => {
+    const btn = block.querySelector(".comments-showmore");
+    if (!btn) return;
+
+    btn.addEventListener("click", () => {
+      const isCollapsed = block.classList.contains("js-comments-collapsed");
+      block.classList.toggle("js-comments-collapsed", !isCollapsed);
+      block.classList.toggle("js-comments-expanded", isCollapsed);
+      btn.textContent = isCollapsed ? "Свернуть комментарии" : "Развернуть комментарии";
+    });
+  });
+
+  // ===== ОТВЕТИТЬ: открыть/закрыть форму =====
+  document.addEventListener("click", (e) => {
+    const btn = e.target.closest(".comment-reply-toggle");
+    if (!btn) return;
+
+    e.preventDefault();
+    const sel = btn.getAttribute("data-target");
+    const form = sel ? document.querySelector(sel) : null;
+    if (!form) return;
+
+    const isHidden = form.style.display === "none" || !form.style.display;
+    form.style.display = isHidden ? "block" : "none";
+    if (isHidden) {
+      const ta = form.querySelector("textarea");
+      if (ta) ta.focus();
+    }
+  });
+
+  // ===== MEDIA PREVIEW (для всех media-form: и новая форма, и ответы) =====
+  function bindMediaForm(form) {
+    const input = form.querySelector('input[type="file"].media-file-input');
+    const preview = form.querySelector(".media-preview");
+    const img = form.querySelector(".media-preview-img");
+    const remove = form.querySelector(".media-remove-btn");
+
+    if (!input || !preview || !img || !remove) return;
+
+    input.addEventListener("change", () => {
+      const file = input.files && input.files[0];
+      if (!file) {
+        preview.hidden = true;
+        img.src = "";
+        return;
+      }
+      img.src = URL.createObjectURL(file);
+      preview.hidden = false;
+    });
+
+    remove.addEventListener("click", () => {
+      input.value = "";
+      preview.hidden = true;
+      img.src = "";
+    });
+  }
+
+  document.querySelectorAll("form.media-form").forEach(bindMediaForm);
+
+  // ===== AJAX: лайк темы =====
+  document.addEventListener("click", async (e) => {
+    const btn = e.target.closest(".vk-like-btn");
+    if (!btn) return;
+
+    const auth = btn.getAttribute("data-auth") === "1";
+    if (!auth) return;
+
+    const topicId = btn.getAttribute("data-topic-id");
+    if (!topicId) return;
+
+    try {
+      const res = await fetch(`/toggle_topic_like/${topicId}/`, {
+        method: "POST",
+        headers: {
+          "X-CSRFToken": csrftoken,
+          "X-Requested-With": "XMLHttpRequest",
+        },
+      });
+      const data = await res.json();
+
+      const ico = btn.querySelector(".vk-like-icon");
+      const cnt = btn.querySelector(".vk-like-count");
+      if (ico) ico.textContent = data.liked ? "❤️" : "🤍";
+      if (cnt) cnt.textContent = data.likes;
+    } catch (err) {
+      console.error(err);
+    }
+  });
+
+  // ===== AJAX: лайк поста =====
+  document.addEventListener("click", async (e) => {
+    const btn = e.target.closest(".post-like-btn");
+    if (!btn) return;
+
+    const auth = btn.getAttribute("data-auth") === "1";
+    if (!auth) return;
+
+    const postId = btn.getAttribute("data-post-id");
+    if (!postId) return;
+
+    try {
+      const res = await fetch(`/toggle_post_like/${postId}/`, {
+        method: "POST",
+        headers: {
+          "X-CSRFToken": csrftoken,
+          "X-Requested-With": "XMLHttpRequest",
+        },
+      });
+      const data = await res.json();
+
+      const ico = btn.querySelector(".post-like-icon");
+      const cnt = btn.querySelector(".like-count");
+      if (ico) ico.textContent = data.liked ? "❤️" : "🤍";
+      if (cnt) cnt.textContent = data.likes;
+    } catch (err) {
+      console.error(err);
+    }
+  });
+
+  // ===== AJAX: лайк комментария =====
+  document.addEventListener("click", async (e) => {
+    const btn = e.target.closest(".comment-like-btn");
+    if (!btn) return;
+
+    const auth = btn.getAttribute("data-auth") === "1";
+    if (!auth) return;
+
+    const commentId = btn.getAttribute("data-comment-id");
+    if (!commentId) return;
+
+    try {
+      const res = await fetch(`/toggle_comment_like/${commentId}/`, {
+        method: "POST",
+        headers: {
+          "X-CSRFToken": csrftoken,
+          "X-Requested-With": "XMLHttpRequest",
+        },
+      });
+      const data = await res.json();
+
+      const ico = document.getElementById(`c-like-ico-${commentId}`);
+      const cnt = document.getElementById(`c-like-cnt-${commentId}`);
+      if (ico) ico.textContent = data.liked ? "❤️" : "🤍";
+      if (cnt) cnt.textContent = data.likes;
+    } catch (err) {
+      console.error(err);
+    }
+  });
+
+  // ===== Пост-комменты: просто показать/скрыть блок (как было) =====
+  document.addEventListener("click", (e) => {
+    const btn = e.target.closest(".post-comments-toggle");
+    if (!btn) return;
+
+    const targetSel = btn.getAttribute("data-target");
+    const target = targetSel ? document.querySelector(targetSel) : null;
+    if (!target) return;
+
+    const isHidden = target.style.display === "none" || !target.style.display;
+    target.style.display = isHidden ? "block" : "none";
+  });
+})();
+</script>

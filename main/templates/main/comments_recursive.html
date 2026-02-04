@@ -1,31 +1,111 @@
+{% load static %}
+{% load dict_filters %}
 {% for comment in comments %}
-<div class="comment-card">
-    <div class="comment-header">
-        <strong>{{ comment.author.username }}</strong>
-        <span class="comment-date">{{ comment.created_at|date:"d M Y H:i" }}</span>
+  <div class="comment-wrap">
+
+    <div class="comment-card">
+      <div class="comment-header">
+        {% if comment.author.profile.avatar %}
+          <img class="avatar" src="{{ comment.author.profile.avatar.url }}" alt="">
+        {% else %}
+          <img class="avatar" src="{% static comment.author.profile.default_avatar %}" alt="">
+        {% endif %}
+
+        <div class="comment-meta">
+          <div class="comment-author">{{ comment.author.username }}</div>
+          <div class="comment-date">{{ comment.created_at|date:"d M Y H:i" }}</div>
+        </div>
+      </div>
+
+      <div class="comment-text">{{ comment.content|linebreaks }}</div>
+
+      {% if comment.image %}
+        <img class="reply-image" src="{{ comment.image.url }}" alt="">
+      {% endif %}
+
+      <div class="comment-actions">
+
+        <!-- ❤️ лайк комментария -->
+        <button
+          type="button"
+          class="comment-like-btn header-btn {% if not user.is_authenticated %}is-disabled{% endif %}"
+          data-comment-id="{{ comment.id }}"
+          data-auth="{% if user.is_authenticated %}1{% else %}0{% endif %}"
+        >
+          <span class="comment-like-icon" id="c-like-ico-{{ comment.id }}">
+            {% if user.is_authenticated and comment.id in liked_comment_ids %}❤️{% else %}🤍{% endif %}
+          </span>
+          <span class="comment-like-count" id="c-like-cnt-{{ comment.id }}">
+            {% if comment_like_counts %}
+              {{ comment_like_counts|get_item:comment.id|default:0 }}
+            {% else %}
+              {{ comment.likes_count|default:0 }}
+            {% endif %}
+          </span>
+        </button>
+
+        {% if user.is_authenticated %}
+          <button
+            type="button"
+            class="comment-reply-toggle"
+            data-target="#reply-form-{{ comment.id }}"
+          >
+            Ответить
+          </button>
+        {% endif %}
+
+        {% if user.is_authenticated and user == comment.author %}
+          <form method="post" action="{% url 'comment-delete' comment.id %}" class="inline-form">
+            {% csrf_token %}
+            <button type="submit" class="header-btn danger-btn">Удалить</button>
+          </form>
+        {% endif %}
+
+      </div>
+
+      {% if user.is_authenticated %}
+        <form
+          id="reply-form-{{ comment.id }}"
+          method="post"
+          enctype="multipart/form-data"
+          class="reply-form media-form"
+          style="display:none;"
+        >
+          {% csrf_token %}
+          <div class="media-row">
+            <textarea name="content" placeholder="Ваш ответ..." class="reply-textarea"></textarea>
+
+            <input
+              id="reply-file-{{ comment.id }}"
+              type="file"
+              name="image"
+              accept="image/*"
+              class="media-file-input"
+            >
+            <label for="reply-file-{{ comment.id }}" class="media-icon-btn" title="Добавить фото">📎</label>
+          </div>
+
+          <div class="media-preview" hidden>
+            <img class="media-preview-img" alt="">
+            <button type="button" class="media-remove-btn" title="Удалить фото">✕</button>
+          </div>
+
+          <input type="hidden" name="parent_id" value="{{ comment.id }}">
+          {% if post_id %}
+            <input type="hidden" name="post_id" value="{{ post_id }}">
+          {% endif %}
+
+          <button type="submit" class="reply-btn">Отправить</button>
+        </form>
+      {% endif %}
+
     </div>
-    <p>{{ comment.content|linebreaks }}</p>
-
-    {% if comment.image %}
-    <img src="{{ comment.image.url }}" class="reply-image">
-    {% endif %}
-
-    {% if user.is_authenticated %}
-    <form method="post"
-          action="{% if post_id %}{% url 'add-reply' post_id=post_id %}{% endif %}"
-          class="reply-form" enctype="multipart/form-data">
-        {% csrf_token %}
-        <input type="hidden" name="parent" value="{{ comment.id }}">
-        <textarea name="content" placeholder="Ответ..." class="reply-textarea"></textarea>
-        <input type="file" name="image" class="reply-image-input">
-        <button type="submit" class="reply-btn">Ответить</button>
-    </form>
-    {% endif %}
 
     {% if comment.replies.all %}
-    <div class="reply-card">
+      <div class="replies-container">
         {% include "main/comments_recursive.html" with comments=comment.replies.all post_id=post_id %}
-    </div>
+      </div>
     {% endif %}
-</div>
+
+  </div>
 {% endfor %}
