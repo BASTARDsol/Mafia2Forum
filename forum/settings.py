@@ -19,7 +19,15 @@ SECRET_KEY = 'django-insecure-4=+1=d5^^_uqbs%hsktj63e97%p1yyqfir0iu#r_h6r94+9#$+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    'mafia2forum.onrender.com',  # ваш домен
+    '127.0.0.1',  # локальный адрес для разработки
+    'localhost',  # локальный адрес для разработки
+    '0.0.0.0',  # возможно, это для всех IP в случае, если вам нужно
+]
+
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
 
 
 # Application definition
