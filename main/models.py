@@ -41,6 +41,8 @@ DEFAULT_AVATARS = [
 class Profile(models.Model):
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE)
     avatar = models.ImageField(upload_to='avatars/', blank=True, null=True)
+    cover_image = models.ImageField(upload_to='profiles/covers/', blank=True, null=True)
+    bio = models.TextField(blank=True)
 
     default_avatar = models.CharField(
         max_length=64,
@@ -50,7 +52,6 @@ class Profile(models.Model):
     )
 
     def save(self, *args, **kwargs):
-        # если загружают новый аватар — удаляем старый файл
         try:
             this = Profile.objects.get(id=self.id)
             if this.avatar != self.avatar and this.avatar:
@@ -60,7 +61,6 @@ class Profile(models.Model):
         except Profile.DoesNotExist:
             pass
 
-        # гарантируем дефолт если нет загруженного аватара
         if not self.avatar and not self.default_avatar:
             self.default_avatar = random.choice(DEFAULT_AVATARS)
 
@@ -81,10 +81,6 @@ def create_or_save_user_profile(sender, instance, created, **kwargs):
         Profile.objects.get_or_create(user=instance)
 
 
-# ---------------------------
-# КАТЕГОРИИ (обязательные для Topic)
-# ---------------------------
-
 class Category(models.Model):
     name = models.CharField(max_length=100, unique=True)
     slug = models.SlugField(max_length=120, unique=True)
@@ -104,11 +100,9 @@ class Topic(models.Model):
         on_delete=models.CASCADE,
         related_name="topics"
     )
-
-    # ✅ обязательная категория
     category = models.ForeignKey(
         Category,
-        on_delete=models.PROTECT,     # нельзя удалить категорию, если есть темы
+        on_delete=models.PROTECT,
         related_name="topics"
     )
 
@@ -147,11 +141,6 @@ class Post(models.Model):
 
 
 class Comment(models.Model):
-    """
-    Один комментарий может быть:
-    - к теме (topic)
-    - или к посту (post)
-    """
     author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="comments")
 
     topic = models.ForeignKey(Topic, on_delete=models.CASCADE, related_name="comments", null=True, blank=True)
@@ -213,11 +202,13 @@ class Notification(models.Model):
     TYPE_TOPIC = "topic"
     TYPE_COMMENT = "comment"
     TYPE_MENTION = "mention"
+    TYPE_LIKE = "like"
 
     TYPE_CHOICES = (
         (TYPE_TOPIC, "Topic update"),
         (TYPE_COMMENT, "Comment update"),
         (TYPE_MENTION, "Mention"),
+        (TYPE_LIKE, "Like"),
     )
 
     recipient = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="notifications")
@@ -237,3 +228,64 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"Notification({self.recipient}, {self.notification_type})"
+
+
+class Dialog(models.Model):
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    participants = models.ManyToManyField(settings.AUTH_USER_MODEL, through="DialogParticipant", related_name="dialogs")
+
+    class Meta:
+        ordering = ["-updated_at"]
+
+    def __str__(self):
+        return f"Dialog #{self.id}"
+
+
+class DialogParticipant(models.Model):
+    dialog = models.ForeignKey(Dialog, on_delete=models.CASCADE, related_name="dialog_participants")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="dialog_participations")
+    joined_at = models.DateTimeField(auto_now_add=True)
+    last_typing_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        unique_together = ("dialog", "user")
+
+    def __str__(self):
+        return f"{self.user} in dialog#{self.dialog_id}"
+
+
+class Message(models.Model):
+    dialog = models.ForeignKey(Dialog, on_delete=models.CASCADE, related_name="messages")
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="messages")
+    content = models.TextField(blank=True)
+    image = models.ImageField(upload_to="messages/images/", null=True, blank=True)
+    attachment = models.FileField(upload_to="messages/files/", null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at"]
+
+    def __str__(self):
+        return f"Message #{self.id} in dialog#{self.dialog_id}"
+
+
+class MessageRead(models.Model):
+    message = models.ForeignKey(Message, on_delete=models.CASCADE, related_name="read_by")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="read_messages")
+    read_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("message", "user")
+
+
+class Activity(models.Model):
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="activities")
+    verb = models.CharField(max_length=120)
+    topic = models.ForeignKey(Topic, on_delete=models.CASCADE, null=True, blank=True)
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, null=True, blank=True)
+    comment = models.ForeignKey(Comment, on_delete=models.CASCADE, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
