@@ -8,7 +8,10 @@
 
     <!-- Левая колонка -->
     <div class="profile-left" style="width:250px; text-align:center;">
-        {% if user.profile.avatar %}
+        <div style="margin:12px 0 6px; font-weight:700;">О себе</div>
+                {{ p_form.bio }}
+
+                {% if user.profile.avatar %}
             <img src="{{ user.profile.avatar.url }}" alt="Avatar"
                  style="width:200px; height:200px; border-radius:50%; object-fit:cover; border:2px solid #ccc;">
         {% else %}
@@ -47,7 +50,10 @@
                 <!-- Avatar -->
                 <div style="display:flex; align-items:center; gap:15px; margin: 16px 0 10px;">
                     <div style="flex-shrink:0;">
-                        {% if user.profile.avatar %}
+                        <div style="margin:12px 0 6px; font-weight:700;">О себе</div>
+                {{ p_form.bio }}
+
+                {% if user.profile.avatar %}
                             <img id="avatarPreview" src="{{ user.profile.avatar.url }}"
                                  style="width:80px; height:80px; border-radius:50%; object-fit:cover; border:2px solid #d4af37;">
                         {% else %}
@@ -67,13 +73,23 @@
 
                         {{ p_form.avatar }}
 
-                        {% if p_form.avatar.errors %}
+                        <label for="id_cover_image" class="header-btn" style="cursor:pointer; display:inline-block; margin-top:8px;">
+                            Выбрать обложку
+                        </label>
+                        {{ p_form.cover_image }}
+
+                        {% if p_form.cover_image.errors %}<div style="color:#ff7b7b; font-size:12px; margin-top:6px;">{{ p_form.cover_image.errors }}</div>{% endif %}
+
+                    {% if p_form.avatar.errors %}
                             <div style="color:#ff7b7b; font-size:12px; margin-top:6px;">
                                 {{ p_form.avatar.errors }}
                             </div>
                         {% endif %}
                     </div>
                 </div>
+
+                <div style="margin:12px 0 6px; font-weight:700;">О себе</div>
+                {{ p_form.bio }}
 
                 {% if user.profile.avatar %}
                 <button type="submit" name="delete_avatar"

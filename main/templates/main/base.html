@@ -12,147 +12,42 @@
 <link rel="stylesheet" href="{% static 'css/style.css' %}">
 
 <style>
-/* ----------------- Общие стили ----------------- */
 html, body { height: 100%; margin: 0; padding: 0; }
-body {
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
-    background: #0d0d10;
-    color: #f5e6c4;
-    font-family: 'Open Sans', sans-serif;
-}
+body { display: flex; flex-direction: column; min-height: 100vh; background: #0d0d10; color: #f5e6c4; font-family: 'Open Sans', sans-serif; }
 a { color: #d4af37; text-decoration: none; transition: 0.2s; }
 a:hover { color: #ffcc00; text-decoration: underline; }
-
-.container {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    width: 950px;
-    max-width: 95%;
-    margin: 0 auto;
-    padding: 20px;
-}
-
-/* ----------------- Header ----------------- */
-header {
-    background: #1c1c22;
-    border-radius: 8px;
-    padding: 12px 20px;
-    margin-bottom: 25px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.8);
-}
+.container { flex: 1; display: flex; flex-direction: column; width: 950px; max-width: 95%; margin: 0 auto; padding: 20px; }
+header { background: #1c1c22; border-radius: 8px; padding: 12px 20px; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.8); }
 .header-container { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
 .header-left, .header-right { display: flex; align-items: center; gap: 10px; }
 .header-right { margin-left: auto; }
-.header-btn {
-    background-color: #d4af37; color: #0d0d10; padding: 8px 15px; border-radius: 6px; font-weight: 700;
-    text-decoration: none; transition: all 0.3s ease; white-space: nowrap;
-}
+.header-btn { background-color: #d4af37; color: #0d0d10; padding: 8px 15px; border-radius: 6px; font-weight: 700; text-decoration: none; transition: all 0.3s ease; white-space: nowrap; }
 .header-btn:hover { background-color: #c19b2e; transform: scale(1.05); box-shadow: 0 0 10px #d4af37; }
-
+.icon-btn { width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: #2a2a30; color: #f5e6c4; font-size: 20px; border: 1px solid #d4af37; position: relative; overflow: visible; }
+.icon-btn:hover { text-decoration: none; color: #ffcc00; box-shadow: 0 0 10px rgba(212,175,55,0.5); }
 .notify-badge {
-    display:inline-flex;
-    min-width:18px;
-    height:18px;
-    border-radius:999px;
-    background:#ff4d6d;
-    color:#fff;
-    font-size:11px;
-    align-items:center;
-    justify-content:center;
-    padding:0 5px;
+    display:inline-flex; min-width:18px; height:18px; border-radius:999px; background:#ff4d6d; color:#fff;
+    font-size:11px; align-items:center; justify-content:center; padding:0 5px; position:absolute; top:-9px; right:-9px;
+    border: 1px solid #0d0d10;
 }
-
-/* ----------------- Avatar ----------------- */
-.avatar {
-    width: 45px; height: 45px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 2px solid #d4af37;
-    padding: 2px;
-    transition: transform 0.2s, box-shadow 0.2s;
-}
+.avatar { width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 2px solid #d4af37; padding: 2px; transition: transform 0.2s, box-shadow 0.2s; }
 .avatar:hover { transform: scale(1.15); box-shadow: 0 0 10px #d4af37; }
-
-/* ----------------- Cards ----------------- */
-.card, .post-card, .comment-card, .new-post-card {
-    background: linear-gradient(145deg, #1c1c22, #2a2a30);
-    border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 20px;
-    box-shadow: 0 6px 12px rgba(0,0,0,0.7);
-    transition: transform 0.3s, box-shadow 0.3s;
-}
-.card:hover, .post-card:hover, .comment-card:hover, .new-post-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 12px 25px rgba(212,175,55,0.6);
-}
-
-/* ----------------- Forms ----------------- */
-input, textarea, select {
-    width: 100%;
-    padding: 12px;
-    margin-bottom: 12px;
-    border-radius: 6px;
-    border: none;
-    font-family: 'Open Sans', sans-serif;
-    font-size: 14px;
-    background: #2a2a30;
-    color: #f5e6c4;
-}
+.card, .post-card, .comment-card, .new-post-card { background: linear-gradient(145deg, #1c1c22, #2a2a30); border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 6px 12px rgba(0,0,0,0.7); transition: transform 0.3s, box-shadow 0.3s; }
+.card:hover, .post-card:hover, .comment-card:hover, .new-post-card:hover { transform: translateY(-5px); box-shadow: 0 12px 25px rgba(212,175,55,0.6); }
+input, textarea, select { width: 100%; padding: 12px; margin-bottom: 12px; border-radius: 6px; border: none; font-family: 'Open Sans', sans-serif; font-size: 14px; background: #2a2a30; color: #f5e6c4; }
 textarea { resize: none; }
-
-textarea:focus, input:focus, select:focus {
-    outline: none;
-    border-color: #d4af37;
-    background: #262632;
-}
-
-button {
-    padding: 12px;
-    margin-bottom: 12px;
-    border-radius: 6px;
-    border: none;
-    font-family: 'Open Sans', sans-serif;
-    font-size: 14px;
-
-    background-color: #d4af37;
-    color: #0d0d10;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
+textarea:focus, input:focus, select:focus { outline: none; border-color: #d4af37; background: #262632; }
+button { padding: 12px; margin-bottom: 12px; border-radius: 6px; border: none; font-family: 'Open Sans', sans-serif; font-size: 14px; background-color: #d4af37; color: #0d0d10; font-weight: 700; cursor: pointer; transition: all 0.3s ease; }
 button:hover { background-color: #c19b2e; transform: scale(1.05); box-shadow: 0 0 10px #d4af37; }
 form button { width: 100%; }
-
-/* ----------------- Headings ----------------- */
 h2.page-title { font-family: 'Merriweather', serif; font-size: 32px; margin-bottom: 20px; border-bottom: 1px solid #d4af37; padding-bottom: 10px; }
-
-/* ----------------- Footer ----------------- */
-footer {
-    text-align: center; padding: 15px 0;
-    background: #1c1c22; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.8); margin-top: auto;
-}
-
-/* ----------------- Forum Table ----------------- */
+footer { text-align: center; padding: 15px 0; background: #1c1c22; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.8); margin-top: auto; }
 .forum-table { width: 100%; border-collapse: collapse; background: #1c1c22; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.6); }
 .forum-table td { padding: 12px; border-bottom: 1px solid #2f2f36; text-align:center; }
 .forum-table tr:hover { background: #24242b; }
-
-/* ----------------- Layout main+sidebar ----------------- */
 .content-area { display: flex; gap: 20px; align-items: flex-start; }
 .content-main{ flex: 1; min-width: 0; }
-
-.content-sidebar{
-    width: 220px;
-    flex: 0 0 220px;
-    position: sticky;
-    top: 20px;
-}
-
-/* ----------------- Responsive ----------------- */
+.content-sidebar{ width: 220px; flex: 0 0 220px; position: sticky; top: 20px; }
 @media (max-width: 768px) {
     .header-container { flex-direction: column; gap: 10px; }
     .header-left, .header-right { justify-content: center; margin-left: 0; }
@@ -177,8 +72,11 @@ footer {
                         <img src="{% static user.profile.default_avatar %}" class="avatar" alt="">
                     {% endif %}
                 </a>
-                <a href="{% url 'notifications' %}" class="header-btn pulse-button">
-                    Уведомления {% if unread_notifications_count > 0 %}<span class="notify-badge">{{ unread_notifications_count }}</span>{% endif %}
+                <a href="{% url 'notifications' %}" class="icon-btn" title="Уведомления" id="notifications-icon">
+                    🔔{% if unread_notifications_count > 0 %}<span class="notify-badge" id="notifications-badge">{{ unread_notifications_count }}</span>{% endif %}
+                </a>
+                <a href="{% url 'dialogs' %}" class="icon-btn" title="Личные сообщения" id="messages-icon">
+                    💬{% if unread_messages_count > 0 %}<span class="notify-badge" id="messages-badge">{{ unread_messages_count }}</span>{% endif %}
                 </a>
                 <a href="{% url 'logout' %}" class="header-btn pulse-button">Выйти</a>
             {% else %}
@@ -208,7 +106,7 @@ footer {
                     <tr><td><a href="{% url 'home' %}">Главная</a></td></tr>
                     <tr><td><a href="{% url 'news' %}">Новости</a></td></tr>
                     <tr><td><a href="{% url 'events' %}">Ивенты</a></td></tr>
-                    {% if user.is_authenticated %}<tr><td><a href="{% url 'notifications' %}">Уведомления</a></td></tr>{% endif %}
+                    {% if user.is_authenticated %}<tr><td><a href="{% url 'notifications' %}">🔔 Уведомления</a></td></tr>{% endif %}
                     <tr><td><span style="color:#888;">Другое</span></td></tr>
                 </tbody>
             </table>
@@ -225,5 +123,49 @@ footer {
 </footer>
 
 </div>
+<script>
+(function(){
+  const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+  const notifIcon = document.getElementById('notifications-icon');
+  const messagesIcon = document.getElementById('messages-icon');
+  if (!notifIcon || !messagesIcon) return;
+  try {
+    const ws = new WebSocket(`${wsProtocol}://${window.location.host}/ws/notifications/`);
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data || '{}');
+      if (typeof data.unread_notifications_count === 'number') {
+        let badge = document.getElementById('notifications-badge');
+        if (data.unread_notifications_count > 0) {
+          if (!badge) {
+            badge = document.createElement('span');
+            badge.id = 'notifications-badge';
+            badge.className = 'notify-badge';
+            notifIcon.appendChild(badge);
+          }
+          badge.textContent = data.unread_notifications_count;
+        } else if (badge) {
+          badge.remove();
+        }
+      }
+      if (typeof data.unread_messages_count === 'number') {
+        let badge = document.getElementById('messages-badge');
+        if (data.unread_messages_count > 0) {
+          if (!badge) {
+            badge = document.createElement('span');
+            badge.id = 'messages-badge';
+            badge.className = 'notify-badge';
+            messagesIcon.appendChild(badge);
+          }
+          badge.textContent = data.unread_messages_count;
+        } else if (badge) {
+          badge.remove();
+        }
+      }
+    };
+  } catch (e) {
+    console.warn('Notifications websocket unavailable', e);
+  }
+})();
+</script>
 </body>
 </html>

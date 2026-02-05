@@ -68,8 +68,8 @@
       {% if user.is_authenticated %}
         <form method="post" action="{% url 'topic-subscribe' topic.id %}" style="margin:0;">
           {% csrf_token %}
-          <button type="submit" class="header-btn" style="width:auto; margin:0;">
-            {% if is_subscribed %}Отписаться{% else %}Подписаться{% endif %}
+          <button type="submit" class="icon-btn" style="margin:0;" title="{% if is_subscribed %}Отписаться{% else %}Подписаться{% endif %}">
+            {% if is_subscribed %}🔕{% else %}🔔{% endif %}
           </button>
         </form>
       {% endif %}
@@ -105,11 +105,6 @@
           >
 
           <label for="topic-comment-file" class="media-icon-btn" title="Добавить фото">📎</label>
-        </div>
-
-        <div class="media-preview" hidden>
-          <img class="media-preview-img" alt="">
-          <button type="button" class="media-remove-btn" title="Удалить фото">✕</button>
         </div>
 
         <button type="submit" class="reply-btn">Отправить</button>

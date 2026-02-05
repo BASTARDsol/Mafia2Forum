@@ -9,8 +9,6 @@
     {% if topics %}
         {% for topic in topics %}
             <div class="card" style="display:flex; align-items:flex-start; gap:15px; padding:15px;">
-
-                <!-- Слева: аватар -->
                 <div style="flex-shrink:0; text-align:center;">
                     {% if topic.author.profile.avatar %}
                         <img src="{{ topic.author.profile.avatar.url }}" alt="Avatar" class="avatar" style="width:45px; height:45px;">
@@ -22,7 +20,6 @@
                     </div>
                 </div>
 
-                <!-- Центр: заголовок, описание, статистика -->
                 <div style="flex:1;">
                     <h3 style="margin:0 0 6px 0; font-size:18px; color:#d4af37;">
                         <a href="{% url 'topic-detail' topic.id %}" style="color:#d4af37; font-weight:bold; text-decoration:none;">
@@ -35,16 +32,12 @@
                     </p>
                     {% endif %}
                     <div style="font-size:12px; color:#aaa; display:flex; gap:15px; flex-wrap:wrap;">
-                        {% if topic.last_post %}
-                            <span>Последний пост: <a href="{% url 'public-profile' topic.last_post.author.username %}">{{ topic.last_post.author.username }}</a> {{ topic.last_post.created_at|date:"d.m.Y H:i" }}</span>
-                        {% else %}
-                            <span>Нет постов</span>
-                        {% endif %}
-                        <span>Всего лайков: {{ topic.total_likes|default:"0" }}</span>
+                        <span>Дата: {{ topic.created_at|date:"d.m.Y H:i" }}</span>
+                        <span>Всего лайков: {{ topic.likes.count }}</span>
+                        <span>Комментариев: {{ topic.comments.count }}</span>
                     </div>
                 </div>
 
-                <!-- Справа: кнопка -->
                 <div style="flex-shrink:0;">
                     <a href="{% url 'topic-detail' topic.id %}" class="header-btn" style="font-size:12px; padding:6px 12px;">Посмотреть</a>
                 </div>
@@ -55,5 +48,21 @@
         <p style="color:#888;">Тем пока что нет.</p>
     {% endif %}
 
+</div>
+
+<div class="card" style="margin-top:20px;">
+    <h3 style="margin-top:0; color:#d4af37;">Лента активности</h3>
+    <div style="display:grid; gap:10px;">
+        {% for act in activities %}
+            <div style="padding:10px; border:1px solid #2f2f36; border-radius:10px; background:#15151b;">
+                <strong>{% if act.actor %}{{ act.actor.username }}{% else %}Система{% endif %}</strong>
+                {{ act.verb }}
+                {% if act.topic %}<a href="{% url 'topic-detail' act.topic.id %}">в теме «{{ act.topic.title }}»</a>{% endif %}
+                <div style="font-size:12px; color:#888; margin-top:4px;">{{ act.created_at|date:"d.m.Y H:i" }}</div>
+            </div>
+        {% empty %}
+            <div style="color:#888;">Пока нет активности.</div>
+        {% endfor %}
+    </div>
 </div>
 {% endblock %}
