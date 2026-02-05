@@ -15,6 +15,7 @@
            style="width:160px; height:160px; margin-bottom:15px;">
     {% endif %}
 
+    {% if is_own_profile %}
     <a href="{% url 'profile_edit' %}" class="header-btn" style="display:block; margin-bottom:10px;">
       Редактировать профиль
     </a>
@@ -22,6 +23,7 @@
     <a href="{% url 'logout' %}" class="header-btn">
       Выйти
     </a>
+    {% endif %}
   </div>
 
   <div class="card" style="flex:1;">

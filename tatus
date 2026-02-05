@@ -1,0 +1,113 @@
+[33mcommit 42fc68d55691f94083cf5d597f586f5c3af65aa4[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m, [m[1;31morigin/master[m[33m, [m[1;31morigin/HEAD[m[33m)[m
+Author: BASTARDsol <kuzyakov.nik@invox.ru>
+Date:   Thu Feb 5 19:32:03 2026 +0300
+
+    откат стаб версия
+
+[33mcommit 05d47380e2bc6663927b8fdde80b66349362fce3[m
+Author: BASTARDsol <kuzyakov.nik@invox.ru>
+Date:   Wed Feb 4 13:38:39 2026 +0300
+
+    добавление в рекуарментс
+
+[33mcommit 54273d8f85ab39f8b3161e8892ef752cd5a1f53a[m
+Author: BASTARDsol <kuzyakov.nik@invox.ru>
+Date:   Wed Feb 4 13:30:04 2026 +0300
+
+    WhiteNoise вроде заработал
+
+[33mcommit 590736b13c3a1b8823c51e23e950ab4bc1de36c9[m
+Author: BASTARDsol <kuzyakov.nik@invox.ru>
+Date:   Wed Feb 4 13:06:18 2026 +0300
+
+    добавил WhiteNoise
+
+[33mcommit d6e31de8142fe2ef8f951952f7685032d7ba8164[m
+Author: BASTARDsol <kuzyakov.nik@invox.ru>
+Date:   Wed Feb 4 12:48:45 2026 +0300
+
+    добавил папку статики
+
+[33mcommit ae7191e4e8516f22c94be0eeee2e75aff7542974[m
+Author: BASTARDsol <kuzyakov.nik@invox.ru>
+Date:   Wed Feb 4 12:43:37 2026 +0300
+
+    добавил прокси для обзохода
+
+[33mcommit 5e136d1df75113e3ab99a6802c527cf24bb657c1[m
+Author: BASTARDsol <kuzyakov.nik@invox.ru>
+Date:   Wed Feb 4 12:38:40 2026 +0300
+
+    добавил gunicorn в рекуарементс
+
+[33mcommit 754eeafb1c65825640a675e88a2ab82b9f5006e2[m
+Author: BASTARDsol <kuzyakov.nik@invox.ru>
+Date:   Wed Feb 4 12:30:34 2026 +0300
+
+    откатил
+
+[33mcommit f034054fba8b3c1b70a5b0292e9c5076fb0a79c8[m
+Author: BASTARDsol <kuzyakov.nik@invox.ru>
+Date:   Wed Feb 4 10:06:33 2026 +0300
+
+    аше сообщение о коммите
+
+[33mcommit 88115cd14c1b2fd9d19fd52b5328e6344d57016e[m
+Author: BASTARDsol <kuzyakov.nik@invox.ru>
+Date:   Tue Feb 3 05:37:56 2026 +0300
+
+    Initial commit — полный проект Django
+
+[33mcommit fc701e4b7769884922bfe774db954c533ef997ec[m
+Author: BASTARDsol <kuzyakov.nik@invox.ru>
+Date:   Mon Feb 2 22:41:24 2026 +0300
+
+    fix
+
+[33mcommit 7b57f677cbe4f9b341bd0a73ed65ecdfc57b0940[m
+Author: BASTARDsol <kuzyakov.nik@invox.ru>
+Date:   Mon Feb 2 21:11:10 2026 +0300
+
+    Добавлены изменения
+
+[33mcommit d530fa028abeb17444879cdb39fb0d431ecae0fb[m
+Author: BASTARDsol <kuzyakov.nik@invox.ru>
+Date:   Mon Feb 2 06:22:07 2026 +0300
+
+    обавлена проверка прав доступа для создания постов
+
+[33mcommit 363dd47941867ae4ca4270568506df1c8421e805[m
+Author: BASTARDsol <kuzyakov.nik@invox.ru>
+Date:   Mon Feb 2 06:04:01 2026 +0300
+
+    обавил домен mafia2forum.onrender.com в ALLOWED_HOSTS
+
+[33mcommit 8a3a191bc72a410faf64f68dc171980967ef8bd7[m
+Author: BASTARDsol <kuzyakov.nik@invox.ru>
+Date:   Mon Feb 2 05:57:59 2026 +0300
+
+    Add mafia2forum.onrender.com to ALLOWED_HOSTS
+
+[33mcommit a9d6098efe3254defc8a4c57a42ff9ae578c9363[m
+Author: BASTARDsol <kuzyakov.nik@invox.ru>
+Date:   Mon Feb 2 05:53:03 2026 +0300
+
+    Add Render domain to ALLOWED_HOSTS
+
+[33mcommit 30b73b153244bcbc7df3bb572efd8bbbae6d947a[m
+Author: BASTARDsol <kuzyakov.nik@invox.ru>
+Date:   Mon Feb 2 05:48:27 2026 +0300
+
+    Fix gunicorn version conflict
+
+[33mcommit 9a63cacc29139f37effd42e47ab0803ea2181708[m
+Author: BASTARDsol <kuzyakov.nik@invox.ru>
+Date:   Mon Feb 2 05:45:02 2026 +0300
+
+    Add gunicorn to requirements
+
+[33mcommit 889ae572c593b383f6018070b0ea8416b4923bbb[m
+Author: BASTARDsol <kuzyakov.nik@invox.ru>
+Date:   Mon Feb 2 05:35:34 2026 +0300
+
+    Initial commit

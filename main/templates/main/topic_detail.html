@@ -15,7 +15,7 @@
       {% endif %}
 
       <div class="vk-head-meta">
-        <div class="vk-author">{{ topic.author.username }}</div>
+        <div class="vk-author"><a href="{% url 'public-profile' topic.author.username %}">{{ topic.author.username }}</a></div>
         <div class="vk-time">{{ topic.created_at|date:"d M Y H:i" }}</div>
       </div>
 
@@ -121,7 +121,7 @@
             {% endif %}
 
             <div class="user-info">
-              <strong>{{ post.author.username }}</strong>
+              <strong><a href="{% url 'public-profile' post.author.username %}">{{ post.author.username }}</a></strong>
               <span class="post-date">{{ post.created_at|date:"d M Y H:i" }}</span>
             </div>
           </div>

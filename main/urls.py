@@ -14,6 +14,7 @@ urlpatterns = [
     path("register/", views.register_view, name="register"),
 
     path("profile/", views.profile_view, name="profile"),
+    path("users/<str:username>/", views.public_profile_view, name="public-profile"),
     path("profile/edit/", views.profile_edit_view, name="profile_edit"),
     path("profile/change-password/", views.change_password_view, name="change-password"),
 
