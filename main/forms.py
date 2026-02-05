@@ -1,6 +1,7 @@
 from django import forms
-from django.contrib.auth.forms import UserCreationForm, AuthenticationForm, PasswordChangeForm
-from .models import CustomUser, Profile, Topic, Post, Comment
+from django.contrib.auth.forms import AuthenticationForm, PasswordChangeForm, UserCreationForm
+
+from .models import Comment, CustomUser, Message, Post, Profile, Topic
 
 
 class CustomUserCreationForm(UserCreationForm):
@@ -33,10 +34,21 @@ class ProfileUpdateForm(forms.ModelForm):
             'accept': 'image/*'
         })
     )
+    cover_image = forms.ImageField(
+        required=False,
+        label='',
+        widget=forms.FileInput(attrs={
+            'class': 'hidden-file-input',
+            'accept': 'image/*'
+        })
+    )
 
     class Meta:
         model = Profile
-        fields = ('avatar',)
+        fields = ('avatar', 'cover_image', 'bio')
+        widgets = {
+            'bio': forms.Textarea(attrs={'rows': 4, 'placeholder': 'Расскажите о себе...'}),
+        }
 
 
 class CustomPasswordChangeForm(PasswordChangeForm):
@@ -80,3 +92,14 @@ class CommentForm(forms.ModelForm):
     class Meta:
         model = Comment
         fields = ['content', 'image']
+
+
+class MessageForm(forms.ModelForm):
+    class Meta:
+        model = Message
+        fields = ["content", "image", "attachment"]
+        widgets = {
+            "content": forms.Textarea(attrs={"rows": 2, "placeholder": "Введите сообщение..."}),
+            "image": forms.ClearableFileInput(attrs={'accept': 'image/*'}),
+            "attachment": forms.ClearableFileInput(),
+        }

@@ -1,10 +1,15 @@
 import re
 
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 from django.contrib import messages
 from django.contrib.auth import get_user_model, login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
+from django.db import OperationalError, ProgrammingError
+from django.db.models import Count
 from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from .forms import (
@@ -12,14 +17,20 @@ from .forms import (
     CustomAuthenticationForm,
     CustomPasswordChangeForm,
     CustomUserCreationForm,
+    MessageForm,
     PostCreateForm,
     ProfileUpdateForm,
     TopicCreateForm,
     UserUpdateForm,
 )
 from .models import (
+    Activity,
     Comment,
     CommentReaction,
+    Dialog,
+    DialogParticipant,
+    Message,
+    MessageRead,
     Notification,
     Post,
     Topic,
@@ -28,6 +39,28 @@ from .models import (
 
 User = get_user_model()
 MENTION_RE = re.compile(r"(?<!\w)@([A-Za-z0-9_]{3,150})")
+
+
+def _log_activity(actor, verb, topic=None, post=None, comment=None):
+    Activity.objects.create(actor=actor, verb=verb, topic=topic, post=post, comment=comment)
+
+
+def _push_header_counters(user):
+    channel_layer = get_channel_layer()
+    if not channel_layer:
+        return
+    unread_notifications_count = user.notifications.filter(is_read=False).count()
+    unread_messages_count = Message.objects.filter(dialog__dialog_participants__user=user).exclude(author=user).exclude(read_by__user=user).count()
+    async_to_sync(channel_layer.group_send)(
+        f"notifications_{user.id}",
+        {
+            "type": "notify",
+            "payload": {
+                "unread_notifications_count": unread_notifications_count,
+                "unread_messages_count": unread_messages_count,
+            },
+        },
+    )
 
 
 def _create_mention_notifications(comment: Comment):
@@ -46,6 +79,7 @@ def _create_mention_notifications(comment: Comment):
             notification_type=Notification.TYPE_MENTION,
             message=f"{comment.author.username} упомянул(а) вас в комментарии.",
         )
+        _push_header_counters(mentioned_user)
 
 
 def _notify_topic_subscribers(topic: Topic, actor: User, message: str, post: Post | None = None, comment: Comment | None = None, notification_type: str = Notification.TYPE_TOPIC):
@@ -60,12 +94,51 @@ def _notify_topic_subscribers(topic: Topic, actor: User, message: str, post: Pos
             notification_type=notification_type,
             message=message,
         )
+        _push_header_counters(subscription.user)
+
+
+def _create_like_notification(*, actor: User, recipient: User, message: str, topic: Topic | None = None, post: Post | None = None, comment: Comment | None = None):
+    if actor == recipient:
+        return
+    Notification.objects.create(
+        recipient=recipient,
+        actor=actor,
+        topic=topic,
+        post=post,
+        comment=comment,
+        notification_type=Notification.TYPE_LIKE,
+        message=message,
+    )
+    _push_header_counters(recipient)
+
+
+def _build_profile_context(user_obj: User, is_own_profile: bool):
+    recent_topics = user_obj.topics.select_related("category").order_by("-created_at")[:5]
+    recent_posts = user_obj.posts.select_related("topic").order_by("-created_at")[:5]
+    stats = {
+        "topics_count": user_obj.topics.count(),
+        "posts_count": user_obj.posts.count(),
+        "comments_count": user_obj.comments.count(),
+        "received_topic_likes": sum(topic.likes.count() for topic in user_obj.topics.all()),
+        "received_post_likes": sum(post.likes.count() for post in user_obj.posts.all()),
+    }
+    online_threshold = timezone.now() - timezone.timedelta(minutes=5)
+    is_online = bool(user_obj.last_login and user_obj.last_login >= online_threshold)
+    return {
+        "user_obj": user_obj,
+        "is_own_profile": is_own_profile,
+        "stats": stats,
+        "recent_topics": recent_topics,
+        "recent_posts": recent_posts,
+        "is_online": is_online,
+    }
 
 
 def home(request):
     topics = Topic.objects.all().order_by("-created_at")
     last_posts = {t.id: t.posts.order_by("-created_at").first() for t in topics if t.posts.exists()}
-    return render(request, "main/home.html", {"topics": topics, "last_posts": last_posts})
+    activities = Activity.objects.select_related("actor", "topic", "post", "comment").order_by("-created_at")[:20]
+    return render(request, "main/home.html", {"topics": topics, "last_posts": last_posts, "activities": activities})
 
 
 def news(request):
@@ -117,35 +190,16 @@ def logout_view(request):
 
 @login_required
 def profile_view(request):
-    user_obj = request.user
-    stats = {
-        "topics_count": user_obj.topics.count(),
-        "posts_count": user_obj.posts.count(),
-        "comments_count": user_obj.comments.count(),
-        "received_topic_likes": sum(topic.likes.count() for topic in user_obj.topics.all()),
-        "received_post_likes": sum(post.likes.count() for post in user_obj.posts.all()),
-    }
-    return render(request, "main/profile.html", {
-        "user_obj": user_obj,
-        "is_own_profile": True,
-        "stats": stats,
-    })
+    return render(request, "main/profile.html", _build_profile_context(request.user, True))
 
 
 def public_profile_view(request, username):
     user_obj = get_object_or_404(User, username=username)
-    stats = {
-        "topics_count": user_obj.topics.count(),
-        "posts_count": user_obj.posts.count(),
-        "comments_count": user_obj.comments.count(),
-        "received_topic_likes": sum(topic.likes.count() for topic in user_obj.topics.all()),
-        "received_post_likes": sum(post.likes.count() for post in user_obj.posts.all()),
-    }
-    return render(request, "main/profile.html", {
-        "user_obj": user_obj,
-        "is_own_profile": request.user.is_authenticated and request.user == user_obj,
-        "stats": stats,
-    })
+    return render(
+        request,
+        "main/profile.html",
+        _build_profile_context(user_obj, request.user.is_authenticated and request.user == user_obj),
+    )
 
 
 @login_required
@@ -154,7 +208,6 @@ def profile_edit_view(request):
     profile = user.profile
 
     if request.method == "POST":
-
         if "delete_avatar" in request.POST:
             if profile.avatar:
                 profile.avatar.delete(save=False)
@@ -220,6 +273,7 @@ def create_topic_simple(request):
             topic.author = request.user
             topic.save()
             TopicSubscription.objects.get_or_create(user=request.user, topic=topic)
+            _log_activity(request.user, "создал(а) тему", topic=topic)
             messages.success(request, "Тема создана! Вы автоматически подписаны на обновления.")
             return redirect("topic-detail", topic_id=topic.id)
     else:
@@ -272,6 +326,7 @@ def topic_detail(request, topic_id):
                 p.topic = topic
                 p.author = request.user
                 p.save()
+                _log_activity(request.user, "добавил(а) пост", topic=topic, post=p)
                 _notify_topic_subscribers(
                     topic=topic,
                     actor=request.user,
@@ -311,7 +366,7 @@ def topic_detail(request, topic_id):
                 content=content,
                 image=image
             )
-
+        _log_activity(request.user, "оставил(а) комментарий", topic=topic, comment=created_comment)
         _notify_topic_subscribers(
             topic=topic,
             actor=request.user,
@@ -363,6 +418,7 @@ def notifications_view(request):
 @require_POST
 def notifications_mark_read(request):
     request.user.notifications.filter(is_read=False).update(is_read=True)
+    _push_header_counters(request.user)
     messages.success(request, "Все уведомления отмечены как прочитанные.")
     return redirect("notifications")
 
@@ -385,6 +441,7 @@ def add_reply(request, post_id):
                 content=content,
                 image=image
             )
+            _log_activity(request.user, "ответил(а) в теме", topic=post.topic, comment=created_comment)
             _notify_topic_subscribers(
                 topic=post.topic,
                 actor=request.user,
@@ -438,6 +495,14 @@ def toggle_post_like(request, post_id):
     else:
         post.likes.add(request.user)
         liked = True
+        _create_like_notification(
+            actor=request.user,
+            recipient=post.author,
+            post=post,
+            topic=post.topic,
+            message=f"{request.user.username} поставил(а) лайк вашему посту.",
+        )
+        _log_activity(request.user, "поставил(а) лайк посту", topic=post.topic, post=post)
 
     return JsonResponse({"liked": liked, "likes": post.likes.count()})
 
@@ -453,6 +518,13 @@ def toggle_topic_like(request, topic_id):
     else:
         topic.likes.add(request.user)
         liked = True
+        _create_like_notification(
+            actor=request.user,
+            recipient=topic.author,
+            topic=topic,
+            message=f"{request.user.username} поставил(а) лайк вашей теме.",
+        )
+        _log_activity(request.user, "поставил(а) лайк теме", topic=topic)
 
     return JsonResponse({"liked": liked, "likes": topic.likes.count()})
 
@@ -498,6 +570,139 @@ def toggle_comment_like(request, comment_id):
             reaction_type="like"
         )
         liked = True
+        _create_like_notification(
+            actor=request.user,
+            recipient=comment.author,
+            comment=comment,
+            topic=comment.topic,
+            post=comment.post,
+            message=f"{request.user.username} поставил(а) лайк вашему комментарию.",
+        )
 
     likes = CommentReaction.objects.filter(comment=comment, reaction_type="like").count()
     return JsonResponse({"liked": liked, "likes": likes})
+
+
+@login_required
+def dialogs_list(request):
+    users_for_new_dialog = User.objects.exclude(id=request.user.id).order_by("username")
+    try:
+        dialogs = (
+            Dialog.objects.filter(dialog_participants__user=request.user)
+            .prefetch_related("dialog_participants__user")
+            .annotate(last_message_time=Count("messages"))
+            .distinct()
+            .order_by("-updated_at")
+        )
+        dialogs_count = dialogs.count()
+    except (OperationalError, ProgrammingError):
+        messages.warning(request, "ЛС-чат временно недоступен: примените миграции (python manage.py migrate).")
+        dialogs = []
+        dialogs_count = 0
+
+    return render(request, "main/dialogs.html", {
+        "dialogs": dialogs,
+        "dialogs_count": dialogs_count,
+        "users_for_new_dialog": users_for_new_dialog,
+    })
+
+
+@login_required
+@require_POST
+def start_dialog(request, username):
+    other_user = get_object_or_404(User, username=username)
+
+    try:
+        dialog = (
+            Dialog.objects.filter(dialog_participants__user=request.user)
+            .filter(dialog_participants__user=other_user)
+            .annotate(participants_count=Count("dialog_participants", distinct=True))
+            .filter(participants_count=2)
+            .first()
+        )
+
+        if not dialog:
+            dialog = Dialog.objects.create()
+            DialogParticipant.objects.create(dialog=dialog, user=request.user)
+            DialogParticipant.objects.create(dialog=dialog, user=other_user)
+    except (OperationalError, ProgrammingError):
+        messages.error(request, "Не удалось открыть ЛС-чат. Выполните миграции: python manage.py migrate")
+        return redirect("dialogs")
+
+    return redirect("dialog-detail", dialog_id=dialog.id)
+
+
+@login_required
+def dialog_detail(request, dialog_id):
+    try:
+        dialog = get_object_or_404(Dialog, id=dialog_id, dialog_participants__user=request.user)
+    except (OperationalError, ProgrammingError):
+        messages.error(request, "ЛС-чат недоступен. Выполните миграции: python manage.py migrate")
+        return redirect("dialogs")
+
+    if request.method == "POST":
+        form = MessageForm(request.POST, request.FILES)
+        if form.is_valid() and (form.cleaned_data.get("content", "").strip() or form.cleaned_data.get("image") or form.cleaned_data.get("attachment")):
+            try:
+                msg = form.save(commit=False)
+                msg.dialog = dialog
+                msg.author = request.user
+                msg.content = (msg.content or "").strip()
+                msg.save()
+                dialog.updated_at = timezone.now()
+                dialog.save(update_fields=["updated_at"])
+                for participant in dialog.dialog_participants.select_related("user"):
+                    _push_header_counters(participant.user)
+            except (OperationalError, ProgrammingError):
+                messages.error(request, "Не удалось отправить сообщение. Выполните миграции: python manage.py migrate")
+            return redirect("dialog-detail", dialog_id=dialog.id)
+    else:
+        form = MessageForm()
+
+    try:
+        messages_qs = dialog.messages.select_related("author").order_by("created_at")
+        participants = dialog.dialog_participants.select_related("user")
+        MessageRead.objects.bulk_create(
+            [MessageRead(message=m, user=request.user) for m in messages_qs if m.author_id != request.user.id],
+            ignore_conflicts=True,
+        )
+        _push_header_counters(request.user)
+    except (OperationalError, ProgrammingError):
+        messages.error(request, "ЛС-чат недоступен. Выполните миграции: python manage.py migrate")
+        return redirect("dialogs")
+
+    if request.headers.get("x-requested-with") == "XMLHttpRequest":
+        payload = [
+            {
+                "id": m.id,
+                "author": m.author.username,
+                "is_own": m.author_id == request.user.id,
+                "content": m.content,
+                "image": m.image.url if m.image else "",
+                "attachment": m.attachment.url if m.attachment else "",
+                "created_at": m.created_at.strftime("%d.%m.%Y %H:%M"),
+                "is_read": m.read_by.exclude(user=m.author).exists(),
+            }
+            for m in messages_qs
+        ]
+        return JsonResponse({"messages": payload})
+
+    return render(request, "main/dialog_detail.html", {
+        "dialog": dialog,
+        "messages_qs": messages_qs,
+        "participants": participants,
+        "form": form,
+        "ws_url": f"/ws/dialogs/{dialog.id}/",
+    })
+
+
+@login_required
+@require_POST
+def dialog_typing(request, dialog_id):
+    try:
+        participant = get_object_or_404(DialogParticipant, dialog_id=dialog_id, user=request.user)
+        participant.last_typing_at = timezone.now()
+        participant.save(update_fields=["last_typing_at"])
+        return JsonResponse({"ok": True})
+    except (OperationalError, ProgrammingError):
+        return JsonResponse({"ok": False}, status=503)

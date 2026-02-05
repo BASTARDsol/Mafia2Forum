@@ -1,0 +1,28 @@
+{% extends 'main/base.html' %}
+{% block content %}
+<h2 class="page-title">Личные сообщения</h2>
+
+<div class="card">
+  <h3 style="margin-top:0;">Диалоги</h3>
+  <ul>
+    {% for dialog in dialogs %}
+      <li style="margin-bottom:10px;">
+        <a href="{% url 'dialog-detail' dialog.id %}">
+          {% for p in dialog.dialog_participants.all %}{% if p.user != user %}{{ p.user.username }}{% endif %}{% endfor %}
+        </a>
+      </li>
+    {% empty %}
+      <li>Диалогов пока нет.</li>
+    {% endfor %}
+  </ul>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0;">Начать новый диалог</h3>
+  <div style="display:flex; flex-wrap:wrap; gap:8px;">
+    {% for u in users_for_new_dialog %}
+      <form method="post" action="{% url 'dialog-start' u.username %}" style="margin:0;">{% csrf_token %}<button type="submit" style="width:auto;">{{ u.username }}</button></form>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

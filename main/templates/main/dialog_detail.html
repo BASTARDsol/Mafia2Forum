@@ -1,0 +1,92 @@
+{% extends 'main/base.html' %}
+{% block content %}
+<h2 class="page-title">Чат</h2>
+<div class="card" id="chat-box" style="max-height:420px; overflow:auto;">
+  {% for msg in messages_qs %}
+    <div class="msg" data-id="{{ msg.id }}" style="margin-bottom:10px; text-align:{% if msg.author == user %}right{% else %}left{% endif %};">
+      <div style="font-size:12px; color:#999;">{{ msg.author.username }} · {{ msg.created_at|date:"d.m H:i" }}</div>
+      <div style="display:inline-block; background:{% if msg.author == user %}#3f341d{% else %}#25252d{% endif %}; padding:8px 10px; border-radius:10px;">
+        {% if msg.content %}{{ msg.content }}{% endif %}
+        {% if msg.image %}<div><img src="{{ msg.image.url }}" style="max-width:220px; border-radius:8px; margin-top:6px;"></div>{% endif %}
+        {% if msg.attachment %}<div><a href="{{ msg.attachment.url }}" target="_blank">📎 Вложение</a></div>{% endif %}
+      </div>
+    </div>
+  {% endfor %}
+</div>
+<div id="typing-indicator" style="height:18px; font-size:12px; color:#9f9f9f; margin:6px 0 12px;"></div>
+
+<div class="card">
+  <form method="post" enctype="multipart/form-data" id="message-form">
+    {% csrf_token %}
+    {{ form.content }}
+    {{ form.image }}
+    {{ form.attachment }}
+    <button type="submit">Отправить</button>
+  </form>
+</div>
+
+<script>
+(function(){
+  const box = document.getElementById('chat-box');
+  const typingIndicator = document.getElementById('typing-indicator');
+  const contentInput = document.getElementById('id_content');
+  const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+  const ws = new WebSocket(`${wsProtocol}://${window.location.host}{{ ws_url }}`);
+  const typingUrl = "{% url 'dialog-typing' dialog.id %}";
+
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== "") {
+      const cookies = document.cookie.split(";");
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + "=")) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+
+  function renderMessage(msg) {
+    const isOwn = msg.author === "{{ user.username }}";
+    const align = isOwn ? 'right' : 'left';
+    const bg = isOwn ? '#3f341d' : '#25252d';
+    const image = msg.image ? `<div><img src="${msg.image}" style="max-width:220px; border-radius:8px; margin-top:6px;"></div>` : '';
+    const att = msg.attachment ? `<div><a href="${msg.attachment}" target="_blank">📎 Вложение</a></div>` : '';
+    const html = `<div class="msg" data-id="${msg.id}" style="margin-bottom:10px;text-align:${align};"><div style="font-size:12px;color:#999;">${msg.author} · ${msg.created_at}</div><div style="display:inline-block;background:${bg};padding:8px 10px;border-radius:10px;">${msg.content || ''}${image}${att}</div></div>`;
+    box.insertAdjacentHTML('beforeend', html);
+    box.scrollTop = box.scrollHeight;
+  }
+
+  ws.onmessage = (event) => {
+    const payload = JSON.parse(event.data || '{}');
+    if (payload.type === 'typing' && payload.author !== "{{ user.username }}") {
+      typingIndicator.textContent = `${payload.author} печатает...`;
+      setTimeout(() => {
+        if (typingIndicator.textContent === `${payload.author} печатает...`) {
+          typingIndicator.textContent = '';
+        }
+      }, 1800);
+      return;
+    }
+    if (payload.type === 'message') {
+      renderMessage(payload);
+    }
+  };
+
+  if (contentInput) {
+    contentInput.addEventListener('input', () => {
+      ws.readyState === 1 && ws.send(JSON.stringify({type:'typing', author:"{{ user.username }}"}));
+      fetch(typingUrl, {
+        method: 'POST',
+        headers: {'X-CSRFToken': getCookie('csrftoken'), 'X-Requested-With': 'XMLHttpRequest'}
+      }).catch(() => {});
+    });
+  }
+
+  box.scrollTop = box.scrollHeight;
+})();
+</script>
+{% endblock %}
