@@ -1,7 +1,7 @@
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
+from django.contrib.auth import get_user
 from django.utils import timezone
-
 
 from .online_presence import mark_user_online
 
@@ -14,7 +14,9 @@ class LastActivityMiddleware:
 
     def __call__(self, request):
         response = self.get_response(request)
-        user = getattr(request, "user", None)
+
+        # Resolve user through auth helper to avoid lazy-wrapper edge cases.
+        user = get_user(request)
         if not user or not user.is_authenticated:
             return response
 
@@ -33,7 +35,11 @@ class LastActivityMiddleware:
 
         if should_write:
             request.session[session_key] = now.isoformat()
-            self._broadcast_online_users(user)
+            try:
+                self._broadcast_online_users(user)
+            except Exception:
+                # Presence must never crash page rendering.
+                pass
 
         return response
 
@@ -44,12 +50,12 @@ class LastActivityMiddleware:
 
         users = mark_user_online(user)
         async_to_sync(channel_layer.group_send)(
-            'site_global',
+            "site_global",
             {
-                'type': 'site_event',
-                'payload': {
-                    'type': 'online_users',
-                    'users': users,
+                "type": "site_event",
+                "payload": {
+                    "type": "online_users",
+                    "users": users,
                 },
             },
         )
