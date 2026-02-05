@@ -94,6 +94,19 @@ class Category(models.Model):
         return self.name
 
 
+
+
+class Tag(models.Model):
+    name = models.CharField(max_length=40, unique=True)
+    slug = models.SlugField(max_length=50, unique=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
 class Topic(models.Model):
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -106,8 +119,31 @@ class Topic(models.Model):
         related_name="topics"
     )
 
+    PREFIX_DISCUSSION = "discussion"
+    PREFIX_QUESTION = "question"
+    PREFIX_GUIDE = "guide"
+    PREFIX_IMPORTANT = "important"
+
+    PREFIX_CHOICES = (
+        (PREFIX_DISCUSSION, "Обсуждение"),
+        (PREFIX_QUESTION, "Вопрос"),
+        (PREFIX_GUIDE, "Гайд"),
+        (PREFIX_IMPORTANT, "Важно"),
+    )
+
+    STATUS_OPEN = "open"
+    STATUS_SOLVED = "solved"
+
+    STATUS_CHOICES = (
+        (STATUS_OPEN, "Открыта"),
+        (STATUS_SOLVED, "Решено"),
+    )
+
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
+    prefix = models.CharField(max_length=20, choices=PREFIX_CHOICES, default=PREFIX_DISCUSSION)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_OPEN)
+    is_pinned = models.BooleanField(default=False)
     image = models.ImageField(upload_to="topics/", blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -116,9 +152,10 @@ class Topic(models.Model):
         blank=True,
         related_name="liked_topics"
     )
+    tags = models.ManyToManyField("Tag", blank=True, related_name="topics")
 
     class Meta:
-        ordering = ["-created_at"]
+        ordering = ["-is_pinned", "-created_at"]
 
     def __str__(self):
         return self.title

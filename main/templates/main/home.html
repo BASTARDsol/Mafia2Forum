@@ -4,6 +4,59 @@
 {% block content %}
 <h2 class="page-title">Последние темы</h2>
 
+<div class="card" style="padding:14px;">
+  <form method="get" style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr 1fr auto; gap:8px; align-items:end;">
+    <div>
+      <label style="font-size:12px; color:#aaa;">Поиск</label>
+      <input type="text" name="q" value="{{ search_q }}" placeholder="Тема, описание, автор...">
+    </div>
+    <div>
+      <label style="font-size:12px; color:#aaa;">Категория</label>
+      <select name="category">
+        <option value="">Все</option>
+        {% for c in categories %}
+          <option value="{{ c.slug }}" {% if selected_category == c.slug %}selected{% endif %}>{{ c.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label style="font-size:12px; color:#aaa;">Префикс</label>
+      <select name="prefix">
+        <option value="">Все</option>
+        {% for key, label in prefix_choices %}
+          <option value="{{ key }}" {% if selected_prefix == key %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label style="font-size:12px; color:#aaa;">Статус</label>
+      <select name="status">
+        <option value="">Все</option>
+        {% for key, label in status_choices %}
+          <option value="{{ key }}" {% if selected_status == key %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label style="font-size:12px; color:#aaa;">Сортировка</label>
+      <select name="sort">
+        <option value="new" {% if selected_sort == 'new' %}selected{% endif %}>Новые</option>
+        <option value="popular" {% if selected_sort == 'popular' %}selected{% endif %}>Популярные</option>
+        <option value="comments" {% if selected_sort == 'comments' %}selected{% endif %}>Комментируемые</option>
+        <option value="old" {% if selected_sort == 'old' %}selected{% endif %}>Старые</option>
+      </select>
+    </div>
+    <button type="submit" style="margin:0;">Найти</button>
+  </form>
+  {% if popular_tags %}
+    <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
+      {% for t in popular_tags %}
+        <a href="?tag={{ t.slug }}" class="header-btn" style="padding:4px 8px; font-size:12px;">#{{ t.name }}</a>
+      {% endfor %}
+    </div>
+  {% endif %}
+</div>
+
 <div style="display: flex; flex-direction: column; gap: 15px;" id="home-topics-list">
 
     {% if topics %}
@@ -21,6 +74,14 @@
                 </div>
 
                 <div style="flex:1;">
+                    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:6px;">
+                      {% if topic.is_pinned %}<span style="font-size:11px; color:#ffdb63; border:1px solid #d4af37; border-radius:999px; padding:2px 8px;">📌 Закреп</span>{% endif %}
+                      <span style="font-size:11px; border:1px solid #555; border-radius:999px; padding:2px 8px;">{{ topic.get_prefix_display }}</span>
+                      <span style="font-size:11px; border:1px solid {% if topic.status == 'solved' %}#2d8f4e{% else %}#777{% endif %}; color:{% if topic.status == 'solved' %}#78e39c{% else %}#ccc{% endif %}; border-radius:999px; padding:2px 8px;">{{ topic.get_status_display }}</span>
+                      {% for t in topic.tags.all %}
+                        <a href="?tag={{ t.slug }}" style="font-size:11px; color:#d4af37;">#{{ t.name }}</a>
+                      {% endfor %}
+                    </div>
                     <h3 style="margin:0 0 6px 0; font-size:18px; color:#d4af37;">
                         <a href="{% url 'topic-detail' topic.id %}" style="color:#d4af37; font-weight:bold; text-decoration:none;">
                             {{ topic.title }}
@@ -49,6 +110,18 @@
     {% endif %}
 
 </div>
+
+{% if page_obj.paginator.num_pages > 1 %}
+  <div class="card" style="display:flex; justify-content:center; gap:6px; flex-wrap:wrap;">
+    {% if page_obj.has_previous %}
+      <a class="header-btn" href="?q={{ search_q }}&category={{ selected_category }}&prefix={{ selected_prefix }}&status={{ selected_status }}&sort={{ selected_sort }}&tag={{ selected_tag }}&page={{ page_obj.previous_page_number }}">←</a>
+    {% endif %}
+    <span style="padding:8px 10px;">Стр. {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}
+      <a class="header-btn" href="?q={{ search_q }}&category={{ selected_category }}&prefix={{ selected_prefix }}&status={{ selected_status }}&sort={{ selected_sort }}&tag={{ selected_tag }}&page={{ page_obj.next_page_number }}">→</a>
+    {% endif %}
+  </div>
+{% endif %}
 
 <div class="card" style="margin-top:20px;" id="home-activity-card">
     <h3 style="margin-top:0; color:#d4af37;">Лента активности</h3>

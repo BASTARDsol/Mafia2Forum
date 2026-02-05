@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 
-from .models import CustomUser, Profile, Category, Topic, Post, Comment
+from .models import Category, Comment, CustomUser, Post, Profile, Tag, Topic
 
 
 @admin.register(CustomUser)
@@ -20,11 +20,24 @@ class CustomUserAdmin(UserAdmin):
 class CategoryAdmin(admin.ModelAdmin):
     list_display = ("name", "slug")
     search_fields = ("name", "slug")
-    prepopulated_fields = {"slug": ("name",)}  # slug сам будет заполняться от name
+    prepopulated_fields = {"slug": ("name",)}
 
 
-# Регистрация остальных моделей
+@admin.register(Tag)
+class TagAdmin(admin.ModelAdmin):
+    list_display = ("name", "slug")
+    search_fields = ("name", "slug")
+    prepopulated_fields = {"slug": ("name",)}
+
+
+@admin.register(Topic)
+class TopicAdmin(admin.ModelAdmin):
+    list_display = ("title", "author", "category", "prefix", "status", "is_pinned", "created_at")
+    list_filter = ("category", "prefix", "status", "is_pinned", "created_at")
+    search_fields = ("title", "description", "author__username")
+    filter_horizontal = ("tags",)
+
+
 admin.site.register(Profile)
-admin.site.register(Topic)
 admin.site.register(Post)
 admin.site.register(Comment)

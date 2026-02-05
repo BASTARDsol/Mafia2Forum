@@ -6,7 +6,8 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model, login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.db import OperationalError, ProgrammingError
-from django.db.models import Count
+from django.core.paginator import Paginator
+from django.db.models import Count, Q
 from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
@@ -28,6 +29,7 @@ from .models import (
     Activity,
     Comment,
     CommentReaction,
+    Category,
     Dialog,
     DialogParticipant,
     Message,
@@ -36,6 +38,7 @@ from .models import (
     Post,
     Topic,
     TopicSubscription,
+    Tag,
 )
 from .online_presence import get_online_usernames
 
@@ -153,10 +156,61 @@ def _build_profile_context(user_obj: User, is_own_profile: bool):
 
 
 def home(request):
-    topics = Topic.objects.all().order_by("-created_at")
+    topics_qs = Topic.objects.select_related("author", "category").prefetch_related("tags", "comments")
+
+    q = (request.GET.get("q") or "").strip()
+    category = (request.GET.get("category") or "").strip()
+    prefix = (request.GET.get("prefix") or "").strip()
+    status = (request.GET.get("status") or "").strip()
+    tag = (request.GET.get("tag") or "").strip()
+    sort = (request.GET.get("sort") or "new").strip()
+
+    if q:
+        topics_qs = topics_qs.filter(
+            Q(title__icontains=q)
+            | Q(description__icontains=q)
+            | Q(author__username__icontains=q)
+        )
+    if category:
+        topics_qs = topics_qs.filter(category__slug=category)
+    if prefix:
+        topics_qs = topics_qs.filter(prefix=prefix)
+    if status:
+        topics_qs = topics_qs.filter(status=status)
+    if tag:
+        topics_qs = topics_qs.filter(tags__slug=tag)
+
+    if sort == "popular":
+        topics_qs = topics_qs.annotate(likes_total=Count("likes", distinct=True)).order_by("-is_pinned", "-likes_total", "-created_at")
+    elif sort == "comments":
+        topics_qs = topics_qs.annotate(comments_total=Count("comments", distinct=True)).order_by("-is_pinned", "-comments_total", "-created_at")
+    elif sort == "old":
+        topics_qs = topics_qs.order_by("-is_pinned", "created_at")
+    else:
+        topics_qs = topics_qs.order_by("-is_pinned", "-created_at")
+
+    paginator = Paginator(topics_qs.distinct(), 10)
+    page_obj = paginator.get_page(request.GET.get("page"))
+    topics = page_obj.object_list
+
     last_posts = {t.id: t.posts.order_by("-created_at").first() for t in topics if t.posts.exists()}
     activities = Activity.objects.select_related("actor", "topic", "post", "comment").order_by("-created_at")[:20]
-    return render(request, "main/home.html", {"topics": topics, "last_posts": last_posts, "activities": activities})
+    return render(request, "main/home.html", {
+        "topics": topics,
+        "page_obj": page_obj,
+        "last_posts": last_posts,
+        "activities": activities,
+        "search_q": q,
+        "selected_category": category,
+        "selected_prefix": prefix,
+        "selected_status": status,
+        "selected_tag": tag,
+        "selected_sort": sort,
+        "categories": Category.objects.all().order_by("name"),
+        "popular_tags": Tag.objects.annotate(topics_count=Count("topics")).order_by("-topics_count", "name")[:20],
+        "prefix_choices": Topic.PREFIX_CHOICES,
+        "status_choices": Topic.STATUS_CHOICES,
+    })
 
 
 def news(request):
@@ -290,6 +344,7 @@ def create_topic_simple(request):
             topic = form.save(commit=False)
             topic.author = request.user
             topic.save()
+            form.save_tags_for_topic(topic)
             TopicSubscription.objects.get_or_create(user=request.user, topic=topic)
             _log_activity(request.user, "создал(а) тему", topic=topic)
             _broadcast_site_event("topic_created", {"topic_id": topic.id, "actor_id": request.user.id})

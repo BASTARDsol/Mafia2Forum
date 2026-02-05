@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm, PasswordChangeForm, UserCreationForm
 
-from .models import Comment, CustomUser, Message, Post, Profile, Topic
+from .models import Comment, CustomUser, Message, Post, Profile, Tag, Topic
 
 
 class CustomUserCreationForm(UserCreationForm):
@@ -58,15 +58,34 @@ class CustomPasswordChangeForm(PasswordChangeForm):
 
 
 class TopicCreateForm(forms.ModelForm):
+    tags_input = forms.CharField(
+        required=False,
+        label='Теги',
+        help_text='Через запятую, например: roleplay, events, guide',
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'roleplay, events'})
+    )
+
     class Meta:
         model = Topic
-        fields = ('title', 'description', 'category', 'image')
+        fields = ('title', 'description', 'category', 'prefix', 'status', 'image')
         widgets = {
             'title': forms.TextInput(attrs={'class': 'form-control'}),
             'description': forms.Textarea(attrs={'class': 'form-control description-scroll', 'rows': 3}),
             'category': forms.Select(attrs={'class': 'form-control'}),
+            'prefix': forms.Select(attrs={'class': 'form-control'}),
+            'status': forms.Select(attrs={'class': 'form-control'}),
             'image': forms.ClearableFileInput(attrs={'class': 'form-control-file'}),
         }
+
+    def save_tags_for_topic(self, topic: Topic):
+        raw = (self.cleaned_data.get('tags_input') or '').strip()
+        if not raw:
+            return
+        names = [t.strip().lower() for t in raw.split(',') if t.strip()]
+        for name in names[:10]:
+            slug = name.replace(' ', '-')[:50]
+            tag, _ = Tag.objects.get_or_create(slug=slug, defaults={'name': name[:40]})
+            topic.tags.add(tag)
 
 
 class PostCreateForm(forms.ModelForm):
