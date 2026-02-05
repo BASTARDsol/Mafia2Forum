@@ -1,0 +1,45 @@
+# Generated manually for new subscription and notifications features
+
+import django.db.models.deletion
+from django.conf import settings
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('main', '0001_initial'),
+    ]
+
+    operations = [
+        migrations.CreateModel(
+            name='TopicSubscription',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('created_at', models.DateTimeField(auto_now_add=True)),
+                ('topic', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='subscriptions', to='main.topic')),
+                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='topic_subscriptions', to=settings.AUTH_USER_MODEL)),
+            ],
+            options={
+                'unique_together': {('user', 'topic')},
+            },
+        ),
+        migrations.CreateModel(
+            name='Notification',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('notification_type', models.CharField(choices=[('topic', 'Topic update'), ('comment', 'Comment update'), ('mention', 'Mention')], max_length=20)),
+                ('message', models.CharField(max_length=255)),
+                ('is_read', models.BooleanField(default=False)),
+                ('created_at', models.DateTimeField(auto_now_add=True)),
+                ('actor', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='sent_notifications', to=settings.AUTH_USER_MODEL)),
+                ('comment', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='notifications', to='main.comment')),
+                ('post', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='notifications', to='main.post')),
+                ('recipient', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='notifications', to=settings.AUTH_USER_MODEL)),
+                ('topic', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='notifications', to='main.topic')),
+            ],
+            options={
+                'ordering': ['-created_at'],
+            },
+        ),
+    ]

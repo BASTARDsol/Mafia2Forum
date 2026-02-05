@@ -195,3 +195,45 @@ class CommentReaction(models.Model):
 
     def __str__(self):
         return f"{self.user} {self.reaction_type} comment#{self.comment_id}"
+
+
+class TopicSubscription(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="topic_subscriptions")
+    topic = models.ForeignKey(Topic, on_delete=models.CASCADE, related_name="subscriptions")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("user", "topic")
+
+    def __str__(self):
+        return f"{self.user} subscribed to topic#{self.topic_id}"
+
+
+class Notification(models.Model):
+    TYPE_TOPIC = "topic"
+    TYPE_COMMENT = "comment"
+    TYPE_MENTION = "mention"
+
+    TYPE_CHOICES = (
+        (TYPE_TOPIC, "Topic update"),
+        (TYPE_COMMENT, "Comment update"),
+        (TYPE_MENTION, "Mention"),
+    )
+
+    recipient = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="notifications")
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="sent_notifications")
+
+    topic = models.ForeignKey(Topic, on_delete=models.CASCADE, null=True, blank=True, related_name="notifications")
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, null=True, blank=True, related_name="notifications")
+    comment = models.ForeignKey(Comment, on_delete=models.CASCADE, null=True, blank=True, related_name="notifications")
+
+    notification_type = models.CharField(max_length=20, choices=TYPE_CHOICES)
+    message = models.CharField(max_length=255)
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"Notification({self.recipient}, {self.notification_type})"

@@ -4,9 +4,9 @@
 {% block content %}
 <h2 class="page-title">Профиль пользователя</h2>
 
-<div style="display:flex; gap:40px; align-items:flex-start;">
+<div style="display:flex; gap:24px; align-items:flex-start; flex-wrap:wrap;">
 
-  <div style="width:250px; text-align:center;">
+  <div class="card" style="width:250px; text-align:center; margin-bottom:0;">
     {% if user_obj.profile.avatar %}
       <img src="{{ user_obj.profile.avatar.url }}" class="avatar"
            style="width:160px; height:160px; margin-bottom:15px;">
@@ -16,21 +16,39 @@
     {% endif %}
 
     {% if is_own_profile %}
-    <a href="{% url 'profile_edit' %}" class="header-btn" style="display:block; margin-bottom:10px;">
-      Редактировать профиль
-    </a>
-
-    <a href="{% url 'logout' %}" class="header-btn">
-      Выйти
-    </a>
+      <a href="{% url 'profile_edit' %}" class="header-btn" style="display:block; margin-bottom:10px;">
+        Редактировать профиль
+      </a>
+      <a href="{% url 'logout' %}" class="header-btn" style="display:block;">
+        Выйти
+      </a>
     {% endif %}
   </div>
 
-  <div class="card" style="flex:1;">
-    <h3 style="margin-top:0;">{{ user_obj.username }}</h3>
-    <p style="color:#aaa; margin-top:10px;">
+  <div class="card" style="flex:1; margin-bottom:0; min-width:320px;">
+    <h3 style="margin-top:0; font-size:26px;">{{ user_obj.username }}</h3>
+    <p style="color:#aaa; margin-top:10px; margin-bottom:4px;">
       Дата регистрации: {{ user_obj.date_joined|date:"d M Y" }}
     </p>
+
+    <div class="profile-stats-grid">
+      <div class="stat-item">
+        <div class="stat-label">Темы</div>
+        <div class="stat-value">{{ stats.topics_count }}</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">Посты</div>
+        <div class="stat-value">{{ stats.posts_count }}</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">Комментарии</div>
+        <div class="stat-value">{{ stats.comments_count }}</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">Лайки на контент</div>
+        <div class="stat-value">{{ stats.received_topic_likes|add:stats.received_post_likes }}</div>
+      </div>
+    </div>
   </div>
 
 </div>

@@ -1,0 +1,28 @@
+{% extends 'main/base.html' %}
+
+{% block content %}
+<h2 class="page-title">Уведомления</h2>
+
+{% if notifications %}
+  <form method="post" action="{% url 'notifications-mark-read' %}" style="margin-bottom:12px;">
+    {% csrf_token %}
+    <button type="submit" class="header-btn" style="width:auto; margin:0;">Отметить всё как прочитанное</button>
+  </form>
+
+  <div class="notifications-list">
+    {% for notification in notifications %}
+      <div class="notification-item {% if not notification.is_read %}is-unread{% endif %}">
+        <div>{{ notification.message }}</div>
+        <div class="notification-meta">
+          {% if notification.topic %}
+            <a href="{% url 'topic-detail' notification.topic.id %}">Перейти к теме</a> •
+          {% endif %}
+          {{ notification.created_at|date:"d.m.Y H:i" }}
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="card">Пока уведомлений нет.</div>
+{% endif %}
+{% endblock %}

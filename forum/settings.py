@@ -21,7 +21,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = [
     'mafia2forum.onrender.com',  # ваш домен
-    '127.0.0.1',  # локальный адрес для разработки
+    '127.0.0.1',  # локалный адрес для разработки
     'localhost',  # локальный адрес для разработки
     '0.0.0.0',  # возможно, это для всех IP в случае, если вам нужно
 ]
@@ -69,6 +69,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'main.context_processors.notifications_count',
             ],
         },
     },

@@ -1,25 +1,65 @@
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth import login, logout, update_session_auth_hash
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from django.http import HttpResponseForbidden, JsonResponse
-from django.views.decorators.http import require_POST
-from django.contrib.auth import get_user_model
+import re
 
-from .models import Topic, Post, Comment, CommentReaction
+from django.contrib import messages
+from django.contrib.auth import get_user_model, login, logout, update_session_auth_hash
+from django.contrib.auth.decorators import login_required
+from django.http import HttpResponseForbidden, JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.http import require_POST
+
 from .forms import (
-    CustomAuthenticationForm,
-    CustomUserCreationForm,
-    UserUpdateForm,
-    ProfileUpdateForm,
-    CustomPasswordChangeForm,
-    TopicCreateForm,
-    PostCreateForm,
     CommentForm,
+    CustomAuthenticationForm,
+    CustomPasswordChangeForm,
+    CustomUserCreationForm,
+    PostCreateForm,
+    ProfileUpdateForm,
+    TopicCreateForm,
+    UserUpdateForm,
+)
+from .models import (
+    Comment,
+    CommentReaction,
+    Notification,
+    Post,
+    Topic,
+    TopicSubscription,
 )
 
-
 User = get_user_model()
+MENTION_RE = re.compile(r"(?<!\w)@([A-Za-z0-9_]{3,150})")
+
+
+def _create_mention_notifications(comment: Comment):
+    usernames = set(MENTION_RE.findall(comment.content or ""))
+    if not usernames:
+        return
+
+    mentioned_users = User.objects.filter(username__in=usernames).exclude(id=comment.author_id)
+    for mentioned_user in mentioned_users:
+        Notification.objects.create(
+            recipient=mentioned_user,
+            actor=comment.author,
+            topic=comment.topic,
+            post=comment.post,
+            comment=comment,
+            notification_type=Notification.TYPE_MENTION,
+            message=f"{comment.author.username} упомянул(а) вас в комментарии.",
+        )
+
+
+def _notify_topic_subscribers(topic: Topic, actor: User, message: str, post: Post | None = None, comment: Comment | None = None, notification_type: str = Notification.TYPE_TOPIC):
+    subscriptions = TopicSubscription.objects.select_related("user").filter(topic=topic).exclude(user=actor)
+    for subscription in subscriptions:
+        Notification.objects.create(
+            recipient=subscription.user,
+            actor=actor,
+            topic=topic,
+            post=post,
+            comment=comment,
+            notification_type=notification_type,
+            message=message,
+        )
 
 
 def home(request):
@@ -77,17 +117,34 @@ def logout_view(request):
 
 @login_required
 def profile_view(request):
+    user_obj = request.user
+    stats = {
+        "topics_count": user_obj.topics.count(),
+        "posts_count": user_obj.posts.count(),
+        "comments_count": user_obj.comments.count(),
+        "received_topic_likes": sum(topic.likes.count() for topic in user_obj.topics.all()),
+        "received_post_likes": sum(post.likes.count() for post in user_obj.posts.all()),
+    }
     return render(request, "main/profile.html", {
-        "user_obj": request.user,
+        "user_obj": user_obj,
         "is_own_profile": True,
+        "stats": stats,
     })
 
 
 def public_profile_view(request, username):
     user_obj = get_object_or_404(User, username=username)
+    stats = {
+        "topics_count": user_obj.topics.count(),
+        "posts_count": user_obj.posts.count(),
+        "comments_count": user_obj.comments.count(),
+        "received_topic_likes": sum(topic.likes.count() for topic in user_obj.topics.all()),
+        "received_post_likes": sum(post.likes.count() for post in user_obj.posts.all()),
+    }
     return render(request, "main/profile.html", {
         "user_obj": user_obj,
         "is_own_profile": request.user.is_authenticated and request.user == user_obj,
+        "stats": stats,
     })
 
 
@@ -162,7 +219,8 @@ def create_topic_simple(request):
             topic = form.save(commit=False)
             topic.author = request.user
             topic.save()
-            messages.success(request, "Тема создана!")
+            TopicSubscription.objects.get_or_create(user=request.user, topic=topic)
+            messages.success(request, "Тема создана! Вы автоматически подписаны на обновления.")
             return redirect("topic-detail", topic_id=topic.id)
     else:
         form = TopicCreateForm()
@@ -172,23 +230,15 @@ def create_topic_simple(request):
 
 def topic_detail(request, topic_id):
     topic = get_object_or_404(Topic, id=topic_id)
-
     posts = topic.posts.all().order_by("created_at")
-
-    # корневые комментарии к теме (без parent)
     comments = Comment.objects.filter(topic=topic, post__isnull=True, parent__isnull=True).order_by("created_at")
 
     post_form = PostCreateForm()
     comment_form = CommentForm()
 
-    # ====== комментарии по теме (включая ответы) для счётчика и лайков ======
-    all_comment_ids = list(
-        Comment.objects.filter(topic=topic).values_list("id", flat=True)
-    )
-
+    all_comment_ids = list(Comment.objects.filter(topic=topic).values_list("id", flat=True))
     comment_total = len(all_comment_ids)
 
-    # какие комменты лайкнул пользователь
     liked_comment_ids = set()
     if request.user.is_authenticated and all_comment_ids:
         liked_comment_ids = set(
@@ -199,22 +249,22 @@ def topic_detail(request, topic_id):
             ).values_list("comment_id", flat=True)
         )
 
-    # сколько лайков у каждого комментария
     comment_like_counts = {}
     if all_comment_ids:
-        # считаем лайки (в python, чтобы не зависеть от annotate)
         for cid in CommentReaction.objects.filter(
             comment_id__in=all_comment_ids,
             reaction_type="like"
         ).values_list("comment_id", flat=True):
             comment_like_counts[cid] = comment_like_counts.get(cid, 0) + 1
 
-    # ====== создание поста/коммента/ответа ======
+    is_subscribed = False
+    if request.user.is_authenticated:
+        is_subscribed = TopicSubscription.objects.filter(topic=topic, user=request.user).exists()
+
     if request.method == "POST":
         if not request.user.is_authenticated:
             return redirect("login")
 
-        # создание поста
         if "submit_post" in request.POST:
             form = PostCreateForm(request.POST, request.FILES)
             if form.is_valid():
@@ -222,9 +272,15 @@ def topic_detail(request, topic_id):
                 p.topic = topic
                 p.author = request.user
                 p.save()
+                _notify_topic_subscribers(
+                    topic=topic,
+                    actor=request.user,
+                    post=p,
+                    notification_type=Notification.TYPE_TOPIC,
+                    message=f"{request.user.username} опубликовал(а) новый пост в теме «{topic.title}»."
+                )
             return redirect("topic-detail", topic_id=topic.id)
 
-        # комментарий / ответ
         content = (request.POST.get("content") or "").strip()
         image = request.FILES.get("image")
 
@@ -238,16 +294,16 @@ def topic_detail(request, topic_id):
 
         if post_id:
             post = get_object_or_404(Post, id=post_id, topic=topic)
-            Comment.objects.create(
+            created_comment = Comment.objects.create(
                 author=request.user,
-                topic=topic,       # ✅ важно: чтобы ответы к посту тоже считались в comment_total темы
+                topic=topic,
                 post=post,
                 parent=parent,
                 content=content,
                 image=image
             )
         else:
-            Comment.objects.create(
+            created_comment = Comment.objects.create(
                 author=request.user,
                 topic=topic,
                 post=None,
@@ -255,6 +311,15 @@ def topic_detail(request, topic_id):
                 content=content,
                 image=image
             )
+
+        _notify_topic_subscribers(
+            topic=topic,
+            actor=request.user,
+            comment=created_comment,
+            notification_type=Notification.TYPE_COMMENT,
+            message=f"{request.user.username} оставил(а) комментарий в теме «{topic.title}»."
+        )
+        _create_mention_notifications(created_comment)
 
         return redirect("topic-detail", topic_id=topic.id)
 
@@ -267,7 +332,39 @@ def topic_detail(request, topic_id):
         "liked_comment_ids": liked_comment_ids,
         "comment_like_counts": comment_like_counts,
         "comment_total": comment_total,
+        "is_subscribed": is_subscribed,
+        "subscriber_count": topic.subscriptions.count(),
     })
+
+
+@login_required
+@require_POST
+def toggle_topic_subscription(request, topic_id):
+    topic = get_object_or_404(Topic, id=topic_id)
+
+    sub = TopicSubscription.objects.filter(topic=topic, user=request.user).first()
+    if sub:
+        sub.delete()
+        messages.success(request, "Вы отписались от темы.")
+    else:
+        TopicSubscription.objects.create(topic=topic, user=request.user)
+        messages.success(request, "Вы подписались на тему.")
+
+    return redirect("topic-detail", topic_id=topic.id)
+
+
+@login_required
+def notifications_view(request):
+    notifications = request.user.notifications.select_related("topic", "actor")
+    return render(request, "main/notifications.html", {"notifications": notifications})
+
+
+@login_required
+@require_POST
+def notifications_mark_read(request):
+    request.user.notifications.filter(is_read=False).update(is_read=True)
+    messages.success(request, "Все уведомления отмечены как прочитанные.")
+    return redirect("notifications")
 
 
 @login_required
@@ -280,7 +377,7 @@ def add_reply(request, post_id):
         parent_id = request.POST.get("parent")
 
         if content or image:
-            Comment.objects.create(
+            created_comment = Comment.objects.create(
                 topic=post.topic,
                 post=post,
                 parent_id=parent_id or None,
@@ -288,6 +385,14 @@ def add_reply(request, post_id):
                 content=content,
                 image=image
             )
+            _notify_topic_subscribers(
+                topic=post.topic,
+                actor=request.user,
+                comment=created_comment,
+                notification_type=Notification.TYPE_COMMENT,
+                message=f"{request.user.username} оставил(а) ответ в теме «{post.topic.title}»."
+            )
+            _create_mention_notifications(created_comment)
 
     return redirect("topic-detail", topic_id=post.topic.id)
 
@@ -322,9 +427,6 @@ def privacy(request):
     return render(request, "main/privacy.html")
 
 
-# ==========================================================
-# ✅ ЛАЙКИ ПОСТА/ТЕМЫ (ЭТИ ФУНКЦИИ НУЖНЫ ДЛЯ urls.py)
-# ==========================================================
 @login_required
 @require_POST
 def toggle_post_like(request, post_id):
@@ -355,9 +457,6 @@ def toggle_topic_like(request, topic_id):
     return JsonResponse({"liked": liked, "likes": topic.likes.count()})
 
 
-# ==========================================================
-# ✅ УДАЛЕНИЕ КОММЕНТА
-# ==========================================================
 @login_required
 @require_POST
 def delete_comment(request, comment_id):
@@ -374,9 +473,6 @@ def delete_comment(request, comment_id):
     return redirect("home")
 
 
-# ==========================================================
-# ✅ ЛАЙК КОММЕНТА (AJAX) — ДОЛЖЕН СОВПАДАТЬ С urls.py
-# ==========================================================
 @login_required
 @require_POST
 def toggle_comment_like(request, comment_id):

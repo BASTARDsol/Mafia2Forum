@@ -52,6 +52,19 @@ header {
 }
 .header-btn:hover { background-color: #c19b2e; transform: scale(1.05); box-shadow: 0 0 10px #d4af37; }
 
+.notify-badge {
+    display:inline-flex;
+    min-width:18px;
+    height:18px;
+    border-radius:999px;
+    background:#ff4d6d;
+    color:#fff;
+    font-size:11px;
+    align-items:center;
+    justify-content:center;
+    padding:0 5px;
+}
+
 /* ----------------- Avatar ----------------- */
 .avatar {
     width: 45px; height: 45px;
@@ -164,6 +177,9 @@ footer {
                         <img src="{% static user.profile.default_avatar %}" class="avatar" alt="">
                     {% endif %}
                 </a>
+                <a href="{% url 'notifications' %}" class="header-btn pulse-button">
+                    Уведомления {% if unread_notifications_count > 0 %}<span class="notify-badge">{{ unread_notifications_count }}</span>{% endif %}
+                </a>
                 <a href="{% url 'logout' %}" class="header-btn pulse-button">Выйти</a>
             {% else %}
                 <a href="{% url 'login' %}" class="header-btn pulse-button">Войти</a>
@@ -192,6 +208,7 @@ footer {
                     <tr><td><a href="{% url 'home' %}">Главная</a></td></tr>
                     <tr><td><a href="{% url 'news' %}">Новости</a></td></tr>
                     <tr><td><a href="{% url 'events' %}">Ивенты</a></td></tr>
+                    {% if user.is_authenticated %}<tr><td><a href="{% url 'notifications' %}">Уведомления</a></td></tr>{% endif %}
                     <tr><td><span style="color:#888;">Другое</span></td></tr>
                 </tbody>
             </table>

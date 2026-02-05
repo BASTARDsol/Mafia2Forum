@@ -64,6 +64,18 @@
         </span>
       </div>
     </div>
+    <div class="subscription-row">
+      {% if user.is_authenticated %}
+        <form method="post" action="{% url 'topic-subscribe' topic.id %}" style="margin:0;">
+          {% csrf_token %}
+          <button type="submit" class="header-btn" style="width:auto; margin:0;">
+            {% if is_subscribed %}Отписаться{% else %}Подписаться{% endif %}
+          </button>
+        </form>
+      {% endif %}
+      <span class="subscriber-pill">Подписчиков: {{ subscriber_count }}</span>
+    </div>
+
 
     <!-- ===== КОММЕНТЫ (слегка видны + кнопка раскрыть) ===== -->
     <div class="comments-preview js-comments-collapsed" id="topic-comments-block">
