@@ -1,10 +1,9 @@
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
-from django.contrib.auth import get_user_model
 from django.utils import timezone
 
 
-User = get_user_model()
+from .online_presence import mark_user_online
 
 
 class LastActivityMiddleware:
@@ -33,19 +32,17 @@ class LastActivityMiddleware:
                 should_write = True
 
         if should_write:
-            type(user).objects.filter(pk=user.pk).update(last_activity_at=now)
             request.session[session_key] = now.isoformat()
-            self._broadcast_online_users()
+            self._broadcast_online_users(user)
 
         return response
 
-    def _broadcast_online_users(self):
+    def _broadcast_online_users(self, user):
         channel_layer = get_channel_layer()
         if not channel_layer:
             return
 
-        threshold = timezone.now() - timezone.timedelta(minutes=5)
-        users = list(User.objects.filter(last_activity_at__gte=threshold).order_by('username').values_list('username', flat=True)[:25])
+        users = mark_user_online(user)
         async_to_sync(channel_layer.group_send)(
             'site_global',
             {

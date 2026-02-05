@@ -37,6 +37,7 @@ from .models import (
     Topic,
     TopicSubscription,
 )
+from .online_presence import get_online_usernames
 
 User = get_user_model()
 MENTION_RE = re.compile(r"(?<!\w)@([A-Za-z0-9_]{3,150})")
@@ -640,9 +641,7 @@ def toggle_comment_like(request, comment_id):
 
 @login_required
 def online_users_json(request):
-    threshold = timezone.now() - timezone.timedelta(minutes=5)
-    users = User.objects.filter(last_activity_at__gte=threshold).order_by("username")[:25]
-    return JsonResponse({"users": [u.username for u in users]})
+    return JsonResponse({"users": get_online_usernames()})
 
 
 @login_required
