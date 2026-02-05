@@ -9,6 +9,7 @@ from django.db import OperationalError, ProgrammingError
 from django.db.models import Count
 from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.template.loader import render_to_string
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
@@ -43,6 +44,22 @@ MENTION_RE = re.compile(r"(?<!\w)@([A-Za-z0-9_]{3,150})")
 
 def _log_activity(actor, verb, topic=None, post=None, comment=None):
     Activity.objects.create(actor=actor, verb=verb, topic=topic, post=post, comment=comment)
+
+
+def _broadcast_site_event(event_type: str, payload: dict):
+    channel_layer = get_channel_layer()
+    if not channel_layer:
+        return
+    async_to_sync(channel_layer.group_send)(
+        "site_global",
+        {
+            "type": "site_event",
+            "payload": {
+                "type": event_type,
+                **payload,
+            },
+        },
+    )
 
 
 def _push_header_counters(user):
@@ -274,6 +291,7 @@ def create_topic_simple(request):
             topic.save()
             TopicSubscription.objects.get_or_create(user=request.user, topic=topic)
             _log_activity(request.user, "создал(а) тему", topic=topic)
+            _broadcast_site_event("topic_created", {"topic_id": topic.id, "actor_id": request.user.id})
             messages.success(request, "Тема создана! Вы автоматически подписаны на обновления.")
             return redirect("topic-detail", topic_id=topic.id)
     else:
@@ -334,6 +352,7 @@ def topic_detail(request, topic_id):
                     notification_type=Notification.TYPE_TOPIC,
                     message=f"{request.user.username} опубликовал(а) новый пост в теме «{topic.title}»."
                 )
+                _broadcast_site_event("post_created", {"topic_id": topic.id, "post_id": p.id, "actor_id": request.user.id})
             return redirect("topic-detail", topic_id=topic.id)
 
         content = (request.POST.get("content") or "").strip()
@@ -375,6 +394,34 @@ def topic_detail(request, topic_id):
             message=f"{request.user.username} оставил(а) комментарий в теме «{topic.title}»."
         )
         _create_mention_notifications(created_comment)
+
+        rendered_comment_html = render_to_string(
+            "main/comments_recursive.html",
+            {
+                "comments": [created_comment],
+                "post_id": post_id,
+                "liked_comment_ids": set(),
+                "comment_like_counts": {created_comment.id: 0},
+                "user": request.user,
+            },
+            request=request,
+        )
+        _broadcast_site_event("comment_created", {
+            "topic_id": topic.id,
+            "comment_id": created_comment.id,
+            "parent_id": int(parent_id) if parent_id else None,
+            "post_id": int(post_id) if post_id else None,
+            "actor_id": request.user.id,
+            "html": rendered_comment_html,
+        })
+
+        if request.headers.get("x-requested-with") == "XMLHttpRequest":
+            return JsonResponse({
+                "ok": True,
+                "html": rendered_comment_html,
+                "parent_id": int(parent_id) if parent_id else None,
+                "post_id": int(post_id) if post_id else None,
+            })
 
         return redirect("topic-detail", topic_id=topic.id)
 
@@ -504,7 +551,9 @@ def toggle_post_like(request, post_id):
         )
         _log_activity(request.user, "поставил(а) лайк посту", topic=post.topic, post=post)
 
-    return JsonResponse({"liked": liked, "likes": post.likes.count()})
+    likes_count = post.likes.count()
+    _broadcast_site_event("post_liked", {"topic_id": post.topic_id, "post_id": post.id, "likes": likes_count, "actor_id": request.user.id})
+    return JsonResponse({"liked": liked, "likes": likes_count})
 
 
 @login_required
@@ -526,7 +575,9 @@ def toggle_topic_like(request, topic_id):
         )
         _log_activity(request.user, "поставил(а) лайк теме", topic=topic)
 
-    return JsonResponse({"liked": liked, "likes": topic.likes.count()})
+    likes_count = topic.likes.count()
+    _broadcast_site_event("topic_liked", {"topic_id": topic.id, "likes": likes_count, "actor_id": request.user.id})
+    return JsonResponse({"liked": liked, "likes": likes_count})
 
 
 @login_required
@@ -540,6 +591,9 @@ def delete_comment(request, comment_id):
     topic_id = comment.topic_id or (comment.post.topic_id if comment.post_id else None)
 
     comment.delete()
+    _broadcast_site_event("comment_deleted", {"topic_id": topic_id, "comment_id": comment_id, "actor_id": request.user.id})
+    if request.headers.get("x-requested-with") == "XMLHttpRequest":
+        return JsonResponse({"ok": True, "comment_id": comment_id})
     if topic_id:
         return redirect("topic-detail", topic_id=topic_id)
     return redirect("home")
@@ -580,7 +634,15 @@ def toggle_comment_like(request, comment_id):
         )
 
     likes = CommentReaction.objects.filter(comment=comment, reaction_type="like").count()
+    _broadcast_site_event("comment_liked", {"topic_id": comment.topic_id, "comment_id": comment.id, "likes": likes, "actor_id": request.user.id})
     return JsonResponse({"liked": liked, "likes": likes})
+
+
+@login_required
+def online_users_json(request):
+    threshold = timezone.now() - timezone.timedelta(minutes=5)
+    users = User.objects.filter(last_activity_at__gte=threshold).order_by("username")[:25]
+    return JsonResponse({"users": [u.username for u in users]})
 
 
 @login_required
@@ -642,6 +704,7 @@ def dialog_detail(request, dialog_id):
 
     if request.method == "POST":
         form = MessageForm(request.POST, request.FILES)
+        is_ajax = request.headers.get("x-requested-with") == "XMLHttpRequest"
         if form.is_valid() and (form.cleaned_data.get("content", "").strip() or form.cleaned_data.get("image") or form.cleaned_data.get("attachment")):
             try:
                 msg = form.save(commit=False)
@@ -653,9 +716,26 @@ def dialog_detail(request, dialog_id):
                 dialog.save(update_fields=["updated_at"])
                 for participant in dialog.dialog_participants.select_related("user"):
                     _push_header_counters(participant.user)
+                _broadcast_site_event("dialog_message_created", {"dialog_id": dialog.id, "actor_id": request.user.id})
+                if is_ajax:
+                    return JsonResponse({
+                        "ok": True,
+                        "message": {
+                            "id": msg.id,
+                            "author": msg.author.username,
+                            "content": msg.content,
+                            "image": msg.image.url if msg.image else "",
+                            "attachment": msg.attachment.url if msg.attachment else "",
+                            "created_at": msg.created_at.strftime("%d.%m.%Y %H:%M"),
+                        },
+                    })
             except (OperationalError, ProgrammingError):
+                if is_ajax:
+                    return JsonResponse({"ok": False, "error": "db_error"}, status=503)
                 messages.error(request, "Не удалось отправить сообщение. Выполните миграции: python manage.py migrate")
             return redirect("dialog-detail", dialog_id=dialog.id)
+        if is_ajax:
+            return JsonResponse({"ok": False, "error": "empty"}, status=400)
     else:
         form = MessageForm()
 

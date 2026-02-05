@@ -10,6 +10,7 @@ from django.dispatch import receiver
 
 class CustomUser(AbstractUser):
     is_forum_admin = models.BooleanField(default=False)
+    last_activity_at = models.DateTimeField(null=True, blank=True)
 
     groups = models.ManyToManyField(
         Group,

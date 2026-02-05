@@ -179,6 +179,134 @@
     }
   });
 
+
+
+  // ===== AJAX: отправка новых комментариев/ответов без перезагрузки =====
+  document.addEventListener("submit", async (e) => {
+    const form = e.target.closest("form.media-form");
+    if (!form) return;
+
+    e.preventDefault();
+    const formData = new FormData(form);
+
+    try {
+      const res = await fetch(window.location.href, {
+        method: "POST",
+        body: formData,
+        headers: {
+          "X-Requested-With": "XMLHttpRequest",
+        },
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) return;
+
+      if (data.parent_id) {
+        const parentReplies = document.getElementById(`replies-${data.parent_id}`);
+        if (parentReplies) {
+          parentReplies.insertAdjacentHTML("beforeend", data.html);
+        }
+      } else if (data.post_id) {
+        const replies = document.querySelector(`#replies-${data.post_id}`);
+        if (replies) replies.insertAdjacentHTML("beforeend", data.html);
+      } else {
+        const root = document.getElementById("topic-comments-root");
+        if (root) root.insertAdjacentHTML("beforeend", data.html);
+      }
+
+      const cnt = document.getElementById("topic-comment-total");
+      if (cnt) cnt.textContent = String((parseInt(cnt.textContent || "0", 10) || 0) + 1);
+
+      form.reset();
+      const preview = form.querySelector('.media-preview');
+      const img = form.querySelector('.media-preview-img');
+      if (preview) preview.hidden = true;
+      if (img) img.src = '';
+      if (form.classList.contains('reply-form')) {
+        form.style.display = 'none';
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  });
+
+  // ===== AJAX: удаление комментария без перезагрузки =====
+  document.addEventListener("submit", async (e) => {
+    const form = e.target.closest(".comment-delete-form");
+    if (!form) return;
+
+    e.preventDefault();
+    const commentId = form.getAttribute('data-comment-id');
+
+    try {
+      const res = await fetch(form.action, {
+        method: 'POST',
+        body: new FormData(form),
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-CSRFToken': csrftoken,
+        }
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) return;
+      const wrap = document.getElementById(`comment-wrap-${commentId}`);
+      if (wrap) wrap.remove();
+      const cnt = document.getElementById("topic-comment-total");
+      if (cnt) cnt.textContent = String(Math.max(0, (parseInt(cnt.textContent || "0", 10) || 0) - 1));
+    } catch (err) {
+      console.error(err);
+    }
+  });
+
+
+
+  // ===== WebSocket realtime событий по теме (весь сайт) =====
+  const currentUserId = {% if user.is_authenticated %}{{ user.id }}{% else %}null{% endif %};
+  window.addEventListener('site-realtime', (evt) => {
+    const payload = evt.detail || {};
+    const currentTopicId = {{ topic.id }};
+    if (!payload.topic_id || Number(payload.topic_id) !== Number(currentTopicId)) return;
+
+    if (payload.type === 'comment_created') {
+      if (Number(payload.actor_id) === Number(currentUserId)) return;
+      if (payload.parent_id) {
+        const parentReplies = document.getElementById(`replies-${payload.parent_id}`);
+        if (parentReplies && payload.html) parentReplies.insertAdjacentHTML('beforeend', payload.html);
+      } else if (payload.post_id) {
+        const replies = document.querySelector(`#replies-${payload.post_id}`);
+        if (replies && payload.html) replies.insertAdjacentHTML('beforeend', payload.html);
+      } else {
+        const root = document.getElementById('topic-comments-root');
+        if (root && payload.html) root.insertAdjacentHTML('beforeend', payload.html);
+      }
+      const cnt = document.getElementById('topic-comment-total');
+      if (cnt) cnt.textContent = String((parseInt(cnt.textContent || '0', 10) || 0) + 1);
+    }
+
+    if (payload.type === 'comment_deleted') {
+      if (Number(payload.actor_id) === Number(currentUserId)) return;
+      const wrap = document.getElementById(`comment-wrap-${payload.comment_id}`);
+      if (wrap) wrap.remove();
+      const cnt = document.getElementById('topic-comment-total');
+      if (cnt) cnt.textContent = String(Math.max(0, (parseInt(cnt.textContent || '0', 10) || 0) - 1));
+    }
+
+    if (payload.type === 'topic_liked') {
+      const cnt = document.querySelector('.vk-like-count');
+      if (cnt && typeof payload.likes !== 'undefined') cnt.textContent = payload.likes;
+    }
+
+    if (payload.type === 'post_liked') {
+      const btn = document.querySelector(`.post-like-btn[data-post-id="${payload.post_id}"]`);
+      const cnt = btn ? btn.querySelector('.like-count') : null;
+      if (cnt && typeof payload.likes !== 'undefined') cnt.textContent = payload.likes;
+    }
+
+    if (payload.type === 'comment_liked') {
+      const cnt = document.getElementById(`c-like-cnt-${payload.comment_id}`);
+      if (cnt && typeof payload.likes !== 'undefined') cnt.textContent = payload.likes;
+    }
+  });
+
   // ===== Пост-комменты: просто показать/скрыть блок (как было) =====
   document.addEventListener("click", (e) => {
     const btn = e.target.closest(".post-comments-toggle");

@@ -59,7 +59,7 @@
       <!-- 💬 ТОЛЬКО счетчик -->
       <div class="vk-action vk-comment-counter" title="Комментарии">
         <span class="vk-ico">💬</span>
-        <span class="vk-count">
+        <span class="vk-count" id="topic-comment-total">
           {% if comment_total is not None %}{{ comment_total }}{% else %}{{ comments.count }}{% endif %}
         </span>
       </div>
@@ -81,7 +81,7 @@
     <div class="comments-preview js-comments-collapsed" id="topic-comments-block">
       <h2>Комментарии к теме</h2>
 
-      <div class="comments-inner">
+      <div class="comments-inner" id="topic-comments-root">
         {% include "main/comments_recursive.html" with comments=comments post_id=None %}
       </div>
 
@@ -105,6 +105,11 @@
           >
 
           <label for="topic-comment-file" class="media-icon-btn" title="Добавить фото">📎</label>
+        </div>
+
+        <div class="media-preview" hidden>
+          <img class="media-preview-img" alt="">
+          <button type="button" class="media-remove-btn" title="Удалить фото">✕</button>
         </div>
 
         <button type="submit" class="reply-btn">Отправить</button>

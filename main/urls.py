@@ -18,6 +18,7 @@ urlpatterns = [
     path("notifications/", views.notifications_view, name="notifications"),
     path("notifications/mark-read/", views.notifications_mark_read, name="notifications-mark-read"),
     path("dialogs/", views.dialogs_list, name="dialogs"),
+    path("online-users/", views.online_users_json, name="online-users"),
     path("dialogs/start/<str:username>/", views.start_dialog, name="dialog-start"),
     path("dialogs/<int:dialog_id>/", views.dialog_detail, name="dialog-detail"),
     path("dialogs/<int:dialog_id>/typing/", views.dialog_typing, name="dialog-typing"),

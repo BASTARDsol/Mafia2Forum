@@ -1,14 +1,15 @@
 {% extends 'main/base.html' %}
 {% block content %}
-<h2 class="page-title">Чат</h2>
-<div class="card" id="chat-box" style="max-height:420px; overflow:auto;">
+<h2 class="page-title">Диалог</h2>
+
+<div class="card" id="chat-box" style="max-height:500px; overflow:auto; display:flex; flex-direction:column; gap:10px;">
   {% for msg in messages_qs %}
-    <div class="msg" data-id="{{ msg.id }}" style="margin-bottom:10px; text-align:{% if msg.author == user %}right{% else %}left{% endif %};">
-      <div style="font-size:12px; color:#999;">{{ msg.author.username }} · {{ msg.created_at|date:"d.m H:i" }}</div>
-      <div style="display:inline-block; background:{% if msg.author == user %}#3f341d{% else %}#25252d{% endif %}; padding:8px 10px; border-radius:10px;">
-        {% if msg.content %}{{ msg.content }}{% endif %}
+    <div class="msg" data-id="{{ msg.id }}" style="display:flex; flex-direction:column; align-items:{% if msg.author == user %}flex-end{% else %}flex-start{% endif %};">
+      <div style="font-size:12px; color:#a8a8a8; margin-bottom:4px;">{{ msg.author.username }} · {{ msg.created_at|date:"d.m H:i" }}</div>
+      <div style="display:inline-block; max-width:78%; background:{% if msg.author == user %}#3f341d{% else %}#23232b{% endif %}; border:1px solid rgba(212,175,55,0.25); padding:10px 12px; border-radius:12px;">
+        {% if msg.content %}<div style="white-space:pre-wrap;">{{ msg.content }}</div>{% endif %}
         {% if msg.image %}<div><img src="{{ msg.image.url }}" style="max-width:220px; border-radius:8px; margin-top:6px;"></div>{% endif %}
-        {% if msg.attachment %}<div><a href="{{ msg.attachment.url }}" target="_blank">📎 Вложение</a></div>{% endif %}
+        {% if msg.attachment %}<div style="margin-top:6px;"><a href="{{ msg.attachment.url }}" target="_blank">📎 Вложение</a></div>{% endif %}
       </div>
     </div>
   {% endfor %}
@@ -30,6 +31,7 @@
   const box = document.getElementById('chat-box');
   const typingIndicator = document.getElementById('typing-indicator');
   const contentInput = document.getElementById('id_content');
+  const form = document.getElementById('message-form');
   const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
   const ws = new WebSocket(`${wsProtocol}://${window.location.host}{{ ws_url }}`);
   const typingUrl = "{% url 'dialog-typing' dialog.id %}";
@@ -51,11 +53,11 @@
 
   function renderMessage(msg) {
     const isOwn = msg.author === "{{ user.username }}";
-    const align = isOwn ? 'right' : 'left';
-    const bg = isOwn ? '#3f341d' : '#25252d';
+    const align = isOwn ? 'flex-end' : 'flex-start';
+    const bg = isOwn ? '#3f341d' : '#23232b';
     const image = msg.image ? `<div><img src="${msg.image}" style="max-width:220px; border-radius:8px; margin-top:6px;"></div>` : '';
-    const att = msg.attachment ? `<div><a href="${msg.attachment}" target="_blank">📎 Вложение</a></div>` : '';
-    const html = `<div class="msg" data-id="${msg.id}" style="margin-bottom:10px;text-align:${align};"><div style="font-size:12px;color:#999;">${msg.author} · ${msg.created_at}</div><div style="display:inline-block;background:${bg};padding:8px 10px;border-radius:10px;">${msg.content || ''}${image}${att}</div></div>`;
+    const att = msg.attachment ? `<div style="margin-top:6px;"><a href="${msg.attachment}" target="_blank">📎 Вложение</a></div>` : '';
+    const html = `<div class="msg" data-id="${msg.id}" style="display:flex;flex-direction:column;align-items:${align};"><div style="font-size:12px;color:#a8a8a8;margin-bottom:4px;">${msg.author} · ${msg.created_at}</div><div style="display:inline-block;max-width:78%;background:${bg};border:1px solid rgba(212,175,55,0.25);padding:10px 12px;border-radius:12px;">${msg.content || ''}${image}${att}</div></div>`;
     box.insertAdjacentHTML('beforeend', html);
     box.scrollTop = box.scrollHeight;
   }
@@ -83,6 +85,28 @@
         method: 'POST',
         headers: {'X-CSRFToken': getCookie('csrftoken'), 'X-Requested-With': 'XMLHttpRequest'}
       }).catch(() => {});
+    });
+  }
+
+  if (form) {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(form);
+      try {
+        const res = await fetch(window.location.href, {
+          method: 'POST',
+          body: formData,
+          headers: {'X-Requested-With': 'XMLHttpRequest'}
+        });
+        const data = await res.json();
+        if (!res.ok || !data.ok) return;
+        if (ws.readyState === 1) {
+          ws.send(JSON.stringify({type:'message', ...data.message}));
+        } else {
+          renderMessage(data.message);
+        }
+        form.reset();
+      } catch (_) {}
     });
   }
 
