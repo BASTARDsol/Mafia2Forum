@@ -12,7 +12,7 @@
         {% endif %}
 
         <div class="comment-meta">
-          <div class="comment-author">{{ comment.author.username }}</div>
+          <div class="comment-author"><a href="{% url 'public-profile' comment.author.username %}">{{ comment.author.username }}</a></div>
           <div class="comment-date">{{ comment.created_at|date:"d M Y H:i" }}</div>
         </div>
       </div>

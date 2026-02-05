@@ -4,6 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import HttpResponseForbidden, JsonResponse
 from django.views.decorators.http import require_POST
+from django.contrib.auth import get_user_model
 
 from .models import Topic, Post, Comment, CommentReaction
 from .forms import (
@@ -16,6 +17,9 @@ from .forms import (
     PostCreateForm,
     CommentForm,
 )
+
+
+User = get_user_model()
 
 
 def home(request):
@@ -73,7 +77,18 @@ def logout_view(request):
 
 @login_required
 def profile_view(request):
-    return render(request, "main/profile.html", {"user_obj": request.user})
+    return render(request, "main/profile.html", {
+        "user_obj": request.user,
+        "is_own_profile": True,
+    })
+
+
+def public_profile_view(request, username):
+    user_obj = get_object_or_404(User, username=username)
+    return render(request, "main/profile.html", {
+        "user_obj": user_obj,
+        "is_own_profile": request.user.is_authenticated and request.user == user_obj,
+    })
 
 
 @login_required

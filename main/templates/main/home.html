@@ -18,7 +18,7 @@
                         <img src="{% static topic.author.profile.default_avatar %}" alt="Avatar" class="avatar" style="width:45px; height:45px;">
                     {% endif %}
                     <div style="margin-top:5px; font-size:12px; font-weight:600; color:#f5e6c4;">
-                        {{ topic.author.username }}
+                        <a href="{% url 'public-profile' topic.author.username %}">{{ topic.author.username }}</a>
                     </div>
                 </div>
 
