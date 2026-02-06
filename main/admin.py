@@ -1,18 +1,18 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 
-from .models import CustomUser, Profile, Category, Topic, Post, Comment
+from .models import Category, Comment, CustomUser, FactionDossier, FamilyOperation, FamilyTask, Post, Profile, Tag, Topic
 
 
 @admin.register(CustomUser)
 class CustomUserAdmin(UserAdmin):
     model = CustomUser
-    list_display = ('username', 'email', 'is_forum_admin', 'is_staff', 'is_superuser')
+    list_display = ('username', 'email', 'family_rank', 'is_forum_admin', 'is_staff', 'is_superuser')
     fieldsets = UserAdmin.fieldsets + (
-        ('Форум', {'fields': ('is_forum_admin',)}),
+        ('Форум', {'fields': ('is_forum_admin', 'family_rank')}),
     )
     add_fieldsets = UserAdmin.add_fieldsets + (
-        ('Форум', {'fields': ('is_forum_admin',)}),
+        ('Форум', {'fields': ('is_forum_admin', 'family_rank')}),
     )
 
 
@@ -20,11 +20,27 @@ class CustomUserAdmin(UserAdmin):
 class CategoryAdmin(admin.ModelAdmin):
     list_display = ("name", "slug")
     search_fields = ("name", "slug")
-    prepopulated_fields = {"slug": ("name",)}  # slug сам будет заполняться от name
+    prepopulated_fields = {"slug": ("name",)}
 
 
-# Регистрация остальных моделей
+@admin.register(Tag)
+class TagAdmin(admin.ModelAdmin):
+    list_display = ("name", "slug")
+    search_fields = ("name", "slug")
+    prepopulated_fields = {"slug": ("name",)}
+
+
+@admin.register(Topic)
+class TopicAdmin(admin.ModelAdmin):
+    list_display = ("title", "author", "category", "prefix", "status", "is_pinned", "created_at")
+    list_filter = ("category", "prefix", "status", "is_pinned", "created_at")
+    search_fields = ("title", "description", "author__username")
+    filter_horizontal = ("tags",)
+
+
 admin.site.register(Profile)
-admin.site.register(Topic)
 admin.site.register(Post)
 admin.site.register(Comment)
+admin.site.register(FamilyOperation)
+admin.site.register(FactionDossier)
+admin.site.register(FamilyTask)

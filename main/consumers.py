@@ -47,3 +47,23 @@ class NotificationsConsumer(AsyncWebsocketConsumer):
 
     async def notify(self, event):
         await self.send(text_data=json.dumps(event['payload']))
+
+
+class SiteRealtimeConsumer(AsyncWebsocketConsumer):
+    async def connect(self):
+        user = self.scope.get('user')
+        if not user or user.is_anonymous:
+            await self.close()
+            return
+
+        self.group_name = 'site_global'
+        await self.channel_layer.group_add(self.group_name, self.channel_name)
+        await self.accept()
+
+    async def disconnect(self, close_code):
+        user = self.scope.get('user')
+        if user and not user.is_anonymous:
+            await self.channel_layer.group_discard(self.group_name, self.channel_name)
+
+    async def site_event(self, event):
+        await self.send(text_data=json.dumps(event['payload']))

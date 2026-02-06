@@ -11,6 +11,22 @@ from django.dispatch import receiver
 class CustomUser(AbstractUser):
     is_forum_admin = models.BooleanField(default=False)
 
+    RANK_ASSOCIATE = "associate"
+    RANK_SOLDIER = "soldier"
+    RANK_CAPO = "capo"
+    RANK_CONSIGLIERE = "consigliere"
+    RANK_DON = "don"
+
+    FAMILY_RANK_CHOICES = (
+        (RANK_ASSOCIATE, "Associate"),
+        (RANK_SOLDIER, "Soldato"),
+        (RANK_CAPO, "Caporegime"),
+        (RANK_CONSIGLIERE, "Consigliere"),
+        (RANK_DON, "Don"),
+    )
+
+    family_rank = models.CharField(max_length=20, choices=FAMILY_RANK_CHOICES, default=RANK_ASSOCIATE)
+
     groups = models.ManyToManyField(
         Group,
         related_name='customuser_set',
@@ -94,6 +110,19 @@ class Category(models.Model):
         return self.name
 
 
+
+
+class Tag(models.Model):
+    name = models.CharField(max_length=40, unique=True)
+    slug = models.SlugField(max_length=50, unique=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
 class Topic(models.Model):
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -106,8 +135,31 @@ class Topic(models.Model):
         related_name="topics"
     )
 
+    PREFIX_DISCUSSION = "discussion"
+    PREFIX_QUESTION = "question"
+    PREFIX_GUIDE = "guide"
+    PREFIX_IMPORTANT = "important"
+
+    PREFIX_CHOICES = (
+        (PREFIX_DISCUSSION, "Обсуждение"),
+        (PREFIX_QUESTION, "Вопрос"),
+        (PREFIX_GUIDE, "Гайд"),
+        (PREFIX_IMPORTANT, "Важно"),
+    )
+
+    STATUS_OPEN = "open"
+    STATUS_SOLVED = "solved"
+
+    STATUS_CHOICES = (
+        (STATUS_OPEN, "Открыта"),
+        (STATUS_SOLVED, "Решено"),
+    )
+
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
+    prefix = models.CharField(max_length=20, choices=PREFIX_CHOICES, default=PREFIX_DISCUSSION)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_OPEN)
+    is_pinned = models.BooleanField(default=False)
     image = models.ImageField(upload_to="topics/", blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -116,9 +168,10 @@ class Topic(models.Model):
         blank=True,
         related_name="liked_topics"
     )
+    tags = models.ManyToManyField("Tag", blank=True, related_name="topics")
 
     class Meta:
-        ordering = ["-created_at"]
+        ordering = ["-is_pinned", "-created_at"]
 
     def __str__(self):
         return self.title
@@ -289,3 +342,94 @@ class Activity(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
+
+
+class FamilyOperation(models.Model):
+    STATUS_PLANNING = "planning"
+    STATUS_ACTIVE = "active"
+    STATUS_COMPLETED = "completed"
+    STATUS_CANCELLED = "cancelled"
+
+    STATUS_CHOICES = (
+        (STATUS_PLANNING, "Планирование"),
+        (STATUS_ACTIVE, "В процессе"),
+        (STATUS_COMPLETED, "Завершена"),
+        (STATUS_CANCELLED, "Отменена"),
+    )
+
+    title = models.CharField(max_length=180)
+    objective = models.TextField()
+    scheduled_for = models.DateTimeField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PLANNING)
+    coordinator = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="coordinated_operations")
+    participants = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name="family_operations")
+    result_report = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["scheduled_for", "-created_at"]
+
+    def __str__(self):
+        return self.title
+
+
+class FactionDossier(models.Model):
+    SIDE_ALLY = "ally"
+    SIDE_NEUTRAL = "neutral"
+    SIDE_ENEMY = "enemy"
+    SIDE_CHOICES = (
+        (SIDE_ALLY, "Союзник"),
+        (SIDE_NEUTRAL, "Нейтрал"),
+        (SIDE_ENEMY, "Враг"),
+    )
+
+    THREAT_LOW = "low"
+    THREAT_MEDIUM = "medium"
+    THREAT_HIGH = "high"
+    THREAT_CRITICAL = "critical"
+    THREAT_CHOICES = (
+        (THREAT_LOW, "Низкий"),
+        (THREAT_MEDIUM, "Средний"),
+        (THREAT_HIGH, "Высокий"),
+        (THREAT_CRITICAL, "Критический"),
+    )
+
+    target_name = models.CharField(max_length=120)
+    side = models.CharField(max_length=10, choices=SIDE_CHOICES, default=SIDE_NEUTRAL)
+    threat_level = models.CharField(max_length=10, choices=THREAT_CHOICES, default=THREAT_LOW)
+    notes = models.TextField()
+    evidence_link = models.URLField(blank=True)
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="created_dossiers")
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-updated_at"]
+
+    def __str__(self):
+        return self.target_name
+
+
+class FamilyTask(models.Model):
+    STATUS_OPEN = "open"
+    STATUS_IN_PROGRESS = "in_progress"
+    STATUS_DONE = "done"
+    STATUS_CHOICES = (
+        (STATUS_OPEN, "Открыта"),
+        (STATUS_IN_PROGRESS, "Выполняется"),
+        (STATUS_DONE, "Выполнена"),
+    )
+
+    title = models.CharField(max_length=160)
+    description = models.TextField()
+    assignee = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="family_tasks")
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="created_family_tasks")
+    due_at = models.DateTimeField(null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_OPEN)
+    reward_points = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["status", "due_at", "-created_at"]
+
+    def __str__(self):
+        return self.title

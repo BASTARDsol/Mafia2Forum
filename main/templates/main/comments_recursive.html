@@ -1,7 +1,7 @@
 {% load static %}
 {% load dict_filters %}
 {% for comment in comments %}
-  <div class="comment-wrap">
+  <div class="comment-wrap" id="comment-wrap-{{ comment.id }}">
 
     <div class="comment-card">
       <div class="comment-header">
@@ -55,9 +55,9 @@
         {% endif %}
 
         {% if user.is_authenticated and user == comment.author %}
-          <form method="post" action="{% url 'comment-delete' comment.id %}" class="inline-form">
+          <form method="post" action="{% url 'comment-delete' comment.id %}" class="inline-form comment-delete-form" data-comment-id="{{ comment.id }}">
             {% csrf_token %}
-            <button type="submit" class="header-btn danger-btn">Удалить</button>
+            <button type="submit" class="header-btn danger-btn js-comment-delete">Удалить</button>
           </form>
         {% endif %}
 
@@ -102,7 +102,7 @@
     </div>
 
     {% if comment.replies.all %}
-      <div class="replies-container">
+      <div class="replies-container" id="replies-{{ comment.id }}">
         {% include "main/comments_recursive.html" with comments=comment.replies.all post_id=post_id %}
       </div>
     {% endif %}

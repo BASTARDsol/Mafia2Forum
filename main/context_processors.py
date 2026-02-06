@@ -1,6 +1,7 @@
 from django.db import OperationalError, ProgrammingError
 
-from .models import Message, MessageRead
+from .models import Message
+from .online_presence import get_online_usernames
 
 
 def notifications_count(request):
@@ -21,3 +22,10 @@ def notifications_count(request):
         data["unread_messages_count"] = 0
 
     return data
+
+
+def online_users_context(request):
+    if not getattr(request, "user", None) or not request.user.is_authenticated:
+        return {"online_users": []}
+
+    return {"online_users": [{"username": u} for u in get_online_usernames()]}

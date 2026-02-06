@@ -1,20 +1,22 @@
 {% extends 'main/base.html' %}
 {% block content %}
 <h2 class="page-title">Личные сообщения</h2>
+<div id="dialogs-live-note" style="display:none; padding:10px; margin-bottom:12px; border:1px solid #d4af37; border-radius:10px; background:#1a1a20; color:#ffdb63;">🔔 Новое сообщение в одном из диалогов. <a href="" onclick="location.reload(); return false;" style="color:#ffdb63; text-decoration:underline;">Обновить список</a></div>
 
 <div class="card">
   <h3 style="margin-top:0;">Диалоги</h3>
-  <ul>
+  <div style="display:flex; flex-direction:column; gap:10px;">
     {% for dialog in dialogs %}
-      <li style="margin-bottom:10px;">
-        <a href="{% url 'dialog-detail' dialog.id %}">
+      <a href="{% url 'dialog-detail' dialog.id %}" style="display:block; padding:12px; border-radius:10px; background:#212129; border:1px solid rgba(212,175,55,0.2);">
+        <strong>
           {% for p in dialog.dialog_participants.all %}{% if p.user != user %}{{ p.user.username }}{% endif %}{% endfor %}
-        </a>
-      </li>
+        </strong>
+        <div style="font-size:12px; color:#9f9f9f; margin-top:4px;">Открыть переписку</div>
+      </a>
     {% empty %}
-      <li>Диалогов пока нет.</li>
+      <div>Диалогов пока нет.</div>
     {% endfor %}
-  </ul>
+  </div>
 </div>
 
 <div class="card">
@@ -25,4 +27,17 @@
     {% endfor %}
   </div>
 </div>
+<script>
+(function(){
+  const note = document.getElementById('dialogs-live-note');
+  const currentUserId = {% if user.is_authenticated %}{{ user.id }}{% else %}null{% endif %};
+  window.addEventListener('site-realtime', (evt) => {
+    const payload = evt.detail || {};
+    if (payload.type !== 'dialog_message_created') return;
+    if (Number(payload.actor_id) === Number(currentUserId)) return;
+    if (note) note.style.display = 'block';
+  });
+})();
+</script>
+
 {% endblock %}

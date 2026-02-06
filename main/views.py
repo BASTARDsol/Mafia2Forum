@@ -6,9 +6,11 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model, login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.db import OperationalError, ProgrammingError
-from django.db.models import Count
+from django.core.paginator import Paginator
+from django.db.models import Count, Q
 from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.template.loader import render_to_string
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
@@ -17,6 +19,9 @@ from .forms import (
     CustomAuthenticationForm,
     CustomPasswordChangeForm,
     CustomUserCreationForm,
+    FamilyOperationForm,
+    FamilyTaskForm,
+    FactionDossierForm,
     MessageForm,
     PostCreateForm,
     ProfileUpdateForm,
@@ -27,15 +32,21 @@ from .models import (
     Activity,
     Comment,
     CommentReaction,
+    Category,
     Dialog,
     DialogParticipant,
+    FamilyOperation,
+    FamilyTask,
+    FactionDossier,
     Message,
     MessageRead,
     Notification,
     Post,
     Topic,
     TopicSubscription,
+    Tag,
 )
+from .online_presence import get_online_usernames
 
 User = get_user_model()
 MENTION_RE = re.compile(r"(?<!\w)@([A-Za-z0-9_]{3,150})")
@@ -43,6 +54,22 @@ MENTION_RE = re.compile(r"(?<!\w)@([A-Za-z0-9_]{3,150})")
 
 def _log_activity(actor, verb, topic=None, post=None, comment=None):
     Activity.objects.create(actor=actor, verb=verb, topic=topic, post=post, comment=comment)
+
+
+def _broadcast_site_event(event_type: str, payload: dict):
+    channel_layer = get_channel_layer()
+    if not channel_layer:
+        return
+    async_to_sync(channel_layer.group_send)(
+        "site_global",
+        {
+            "type": "site_event",
+            "payload": {
+                "type": event_type,
+                **payload,
+            },
+        },
+    )
 
 
 def _push_header_counters(user):
@@ -135,10 +162,71 @@ def _build_profile_context(user_obj: User, is_own_profile: bool):
 
 
 def home(request):
-    topics = Topic.objects.all().order_by("-created_at")
+    topics_qs = Topic.objects.select_related("author", "category").prefetch_related("tags", "comments")
+
+    q = (request.GET.get("q") or "").strip()
+    category = (request.GET.get("category") or "").strip()
+    prefix = (request.GET.get("prefix") or "").strip()
+    status = (request.GET.get("status") or "").strip()
+    tag = (request.GET.get("tag") or "").strip()
+    sort = (request.GET.get("sort") or "new").strip()
+
+    if q:
+        topics_qs = topics_qs.filter(
+            Q(title__icontains=q)
+            | Q(description__icontains=q)
+            | Q(author__username__icontains=q)
+        )
+    if category:
+        topics_qs = topics_qs.filter(category__slug=category)
+    if prefix:
+        topics_qs = topics_qs.filter(prefix=prefix)
+    if status:
+        topics_qs = topics_qs.filter(status=status)
+    if tag:
+        topics_qs = topics_qs.filter(tags__slug=tag)
+
+    if sort == "popular":
+        topics_qs = topics_qs.annotate(likes_total=Count("likes", distinct=True)).order_by("-is_pinned", "-likes_total", "-created_at")
+    elif sort == "comments":
+        topics_qs = topics_qs.annotate(comments_total=Count("comments", distinct=True)).order_by("-is_pinned", "-comments_total", "-created_at")
+    elif sort == "old":
+        topics_qs = topics_qs.order_by("-is_pinned", "created_at")
+    else:
+        topics_qs = topics_qs.order_by("-is_pinned", "-created_at")
+
+    paginator = Paginator(topics_qs.distinct(), 10)
+    page_obj = paginator.get_page(request.GET.get("page"))
+    topics = page_obj.object_list
+
     last_posts = {t.id: t.posts.order_by("-created_at").first() for t in topics if t.posts.exists()}
     activities = Activity.objects.select_related("actor", "topic", "post", "comment").order_by("-created_at")[:20]
-    return render(request, "main/home.html", {"topics": topics, "last_posts": last_posts, "activities": activities})
+    family_ops = FamilyOperation.objects.select_related("coordinator").prefetch_related("participants").order_by("scheduled_for")[:5]
+    dossiers = FactionDossier.objects.select_related("author").order_by("-updated_at")[:5]
+    family_tasks = FamilyTask.objects.select_related("assignee", "created_by").order_by("status", "due_at", "-created_at")[:6]
+    family_members = User.objects.order_by("username")
+
+    return render(request, "main/home.html", {
+        "topics": topics,
+        "page_obj": page_obj,
+        "last_posts": last_posts,
+        "activities": activities,
+        "search_q": q,
+        "selected_category": category,
+        "selected_prefix": prefix,
+        "selected_status": status,
+        "selected_tag": tag,
+        "selected_sort": sort,
+        "categories": Category.objects.all().order_by("name"),
+        "popular_tags": Tag.objects.annotate(topics_count=Count("topics")).order_by("-topics_count", "name")[:20],
+        "prefix_choices": Topic.PREFIX_CHOICES,
+        "status_choices": Topic.STATUS_CHOICES,
+        "family_ops": family_ops,
+        "dossiers": dossiers,
+        "family_tasks": family_tasks,
+        "can_manage_family_data": _can_manage_family_data(request.user),
+        "family_members": family_members,
+    })
 
 
 def news(request):
@@ -272,8 +360,10 @@ def create_topic_simple(request):
             topic = form.save(commit=False)
             topic.author = request.user
             topic.save()
+            form.save_tags_for_topic(topic)
             TopicSubscription.objects.get_or_create(user=request.user, topic=topic)
             _log_activity(request.user, "создал(а) тему", topic=topic)
+            _broadcast_site_event("topic_created", {"topic_id": topic.id, "actor_id": request.user.id})
             messages.success(request, "Тема создана! Вы автоматически подписаны на обновления.")
             return redirect("topic-detail", topic_id=topic.id)
     else:
@@ -334,6 +424,7 @@ def topic_detail(request, topic_id):
                     notification_type=Notification.TYPE_TOPIC,
                     message=f"{request.user.username} опубликовал(а) новый пост в теме «{topic.title}»."
                 )
+                _broadcast_site_event("post_created", {"topic_id": topic.id, "post_id": p.id, "actor_id": request.user.id})
             return redirect("topic-detail", topic_id=topic.id)
 
         content = (request.POST.get("content") or "").strip()
@@ -375,6 +466,34 @@ def topic_detail(request, topic_id):
             message=f"{request.user.username} оставил(а) комментарий в теме «{topic.title}»."
         )
         _create_mention_notifications(created_comment)
+
+        rendered_comment_html = render_to_string(
+            "main/comments_recursive.html",
+            {
+                "comments": [created_comment],
+                "post_id": post_id,
+                "liked_comment_ids": set(),
+                "comment_like_counts": {created_comment.id: 0},
+                "user": request.user,
+            },
+            request=request,
+        )
+        _broadcast_site_event("comment_created", {
+            "topic_id": topic.id,
+            "comment_id": created_comment.id,
+            "parent_id": int(parent_id) if parent_id else None,
+            "post_id": int(post_id) if post_id else None,
+            "actor_id": request.user.id,
+            "html": rendered_comment_html,
+        })
+
+        if request.headers.get("x-requested-with") == "XMLHttpRequest":
+            return JsonResponse({
+                "ok": True,
+                "html": rendered_comment_html,
+                "parent_id": int(parent_id) if parent_id else None,
+                "post_id": int(post_id) if post_id else None,
+            })
 
         return redirect("topic-detail", topic_id=topic.id)
 
@@ -504,7 +623,9 @@ def toggle_post_like(request, post_id):
         )
         _log_activity(request.user, "поставил(а) лайк посту", topic=post.topic, post=post)
 
-    return JsonResponse({"liked": liked, "likes": post.likes.count()})
+    likes_count = post.likes.count()
+    _broadcast_site_event("post_liked", {"topic_id": post.topic_id, "post_id": post.id, "likes": likes_count, "actor_id": request.user.id})
+    return JsonResponse({"liked": liked, "likes": likes_count})
 
 
 @login_required
@@ -526,7 +647,9 @@ def toggle_topic_like(request, topic_id):
         )
         _log_activity(request.user, "поставил(а) лайк теме", topic=topic)
 
-    return JsonResponse({"liked": liked, "likes": topic.likes.count()})
+    likes_count = topic.likes.count()
+    _broadcast_site_event("topic_liked", {"topic_id": topic.id, "likes": likes_count, "actor_id": request.user.id})
+    return JsonResponse({"liked": liked, "likes": likes_count})
 
 
 @login_required
@@ -540,6 +663,9 @@ def delete_comment(request, comment_id):
     topic_id = comment.topic_id or (comment.post.topic_id if comment.post_id else None)
 
     comment.delete()
+    _broadcast_site_event("comment_deleted", {"topic_id": topic_id, "comment_id": comment_id, "actor_id": request.user.id})
+    if request.headers.get("x-requested-with") == "XMLHttpRequest":
+        return JsonResponse({"ok": True, "comment_id": comment_id})
     if topic_id:
         return redirect("topic-detail", topic_id=topic_id)
     return redirect("home")
@@ -580,7 +706,13 @@ def toggle_comment_like(request, comment_id):
         )
 
     likes = CommentReaction.objects.filter(comment=comment, reaction_type="like").count()
+    _broadcast_site_event("comment_liked", {"topic_id": comment.topic_id, "comment_id": comment.id, "likes": likes, "actor_id": request.user.id})
     return JsonResponse({"liked": liked, "likes": likes})
+
+
+@login_required
+def online_users_json(request):
+    return JsonResponse({"users": get_online_usernames()})
 
 
 @login_required
@@ -642,6 +774,7 @@ def dialog_detail(request, dialog_id):
 
     if request.method == "POST":
         form = MessageForm(request.POST, request.FILES)
+        is_ajax = request.headers.get("x-requested-with") == "XMLHttpRequest"
         if form.is_valid() and (form.cleaned_data.get("content", "").strip() or form.cleaned_data.get("image") or form.cleaned_data.get("attachment")):
             try:
                 msg = form.save(commit=False)
@@ -653,9 +786,26 @@ def dialog_detail(request, dialog_id):
                 dialog.save(update_fields=["updated_at"])
                 for participant in dialog.dialog_participants.select_related("user"):
                     _push_header_counters(participant.user)
+                _broadcast_site_event("dialog_message_created", {"dialog_id": dialog.id, "actor_id": request.user.id})
+                if is_ajax:
+                    return JsonResponse({
+                        "ok": True,
+                        "message": {
+                            "id": msg.id,
+                            "author": msg.author.username,
+                            "content": msg.content,
+                            "image": msg.image.url if msg.image else "",
+                            "attachment": msg.attachment.url if msg.attachment else "",
+                            "created_at": msg.created_at.strftime("%d.%m.%Y %H:%M"),
+                        },
+                    })
             except (OperationalError, ProgrammingError):
+                if is_ajax:
+                    return JsonResponse({"ok": False, "error": "db_error"}, status=503)
                 messages.error(request, "Не удалось отправить сообщение. Выполните миграции: python manage.py migrate")
             return redirect("dialog-detail", dialog_id=dialog.id)
+        if is_ajax:
+            return JsonResponse({"ok": False, "error": "empty"}, status=400)
     else:
         form = MessageForm()
 
@@ -706,3 +856,62 @@ def dialog_typing(request, dialog_id):
         return JsonResponse({"ok": True})
     except (OperationalError, ProgrammingError):
         return JsonResponse({"ok": False}, status=503)
+
+
+def _can_manage_family_data(user):
+    return user.is_authenticated and (user.is_forum_admin or user.family_rank in {"capo", "consigliere", "don"} or user.is_staff)
+
+
+@login_required
+@require_POST
+def create_family_operation(request):
+    if not _can_manage_family_data(request.user):
+        return HttpResponseForbidden("Недостаточно прав.")
+
+    form = FamilyOperationForm(request.POST)
+    if form.is_valid():
+        operation = form.save(commit=False)
+        operation.coordinator = request.user
+        operation.save()
+        form.save_m2m()
+        _broadcast_site_event("family_operation_updated", {"operation_id": operation.id})
+        messages.success(request, "Операция добавлена.")
+    else:
+        messages.error(request, "Не удалось создать операцию. Проверьте поля формы.")
+    return redirect("home")
+
+
+@login_required
+@require_POST
+def create_faction_dossier(request):
+    if not _can_manage_family_data(request.user):
+        return HttpResponseForbidden("Недостаточно прав.")
+
+    form = FactionDossierForm(request.POST)
+    if form.is_valid():
+        dossier = form.save(commit=False)
+        dossier.author = request.user
+        dossier.save()
+        _broadcast_site_event("family_dossier_updated", {"dossier_id": dossier.id})
+        messages.success(request, "Досье сохранено.")
+    else:
+        messages.error(request, "Не удалось сохранить досье. Проверьте поля формы.")
+    return redirect("home")
+
+
+@login_required
+@require_POST
+def create_family_task(request):
+    if not _can_manage_family_data(request.user):
+        return HttpResponseForbidden("Недостаточно прав.")
+
+    form = FamilyTaskForm(request.POST)
+    if form.is_valid():
+        task = form.save(commit=False)
+        task.created_by = request.user
+        task.save()
+        _broadcast_site_event("family_task_updated", {"task_id": task.id, "assignee_id": task.assignee_id})
+        messages.success(request, "Поручение создано.")
+    else:
+        messages.error(request, "Не удалось создать поручение. Проверьте поля формы.")
+    return redirect("home")

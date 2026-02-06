@@ -27,6 +27,15 @@
       {% endif %}
     </div>
 
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
+      {% if topic.is_pinned %}<span style="font-size:11px; color:#ffdb63; border:1px solid #d4af37; border-radius:999px; padding:2px 8px;">📌 Закреп</span>{% endif %}
+      <span style="font-size:11px; border:1px solid #555; border-radius:999px; padding:2px 8px;">{{ topic.get_prefix_display }}</span>
+      <span style="font-size:11px; border:1px solid {% if topic.status == 'solved' %}#2d8f4e{% else %}#777{% endif %}; color:{% if topic.status == 'solved' %}#78e39c{% else %}#ccc{% endif %}; border-radius:999px; padding:2px 8px;">{{ topic.get_status_display }}</span>
+      {% for t in topic.tags.all %}
+        <a href="{% url 'home' %}?tag={{ t.slug }}" style="font-size:11px; color:#d4af37;">#{{ t.name }}</a>
+      {% endfor %}
+    </div>
+
     <div class="vk-title">{{ topic.title }}</div>
 
     <div class="js-collapsible" data-collapsed="1">
@@ -59,7 +68,7 @@
       <!-- 💬 ТОЛЬКО счетчик -->
       <div class="vk-action vk-comment-counter" title="Комментарии">
         <span class="vk-ico">💬</span>
-        <span class="vk-count">
+        <span class="vk-count" id="topic-comment-total">
           {% if comment_total is not None %}{{ comment_total }}{% else %}{{ comments.count }}{% endif %}
         </span>
       </div>
@@ -81,7 +90,7 @@
     <div class="comments-preview js-comments-collapsed" id="topic-comments-block">
       <h2>Комментарии к теме</h2>
 
-      <div class="comments-inner">
+      <div class="comments-inner" id="topic-comments-root">
         {% include "main/comments_recursive.html" with comments=comments post_id=None %}
       </div>
 
@@ -105,6 +114,11 @@
           >
 
           <label for="topic-comment-file" class="media-icon-btn" title="Добавить фото">📎</label>
+        </div>
+
+        <div class="media-preview" hidden>
+          <img class="media-preview-img" alt="">
+          <button type="button" class="media-remove-btn" title="Удалить фото">✕</button>
         </div>
 
         <button type="submit" class="reply-btn">Отправить</button>
