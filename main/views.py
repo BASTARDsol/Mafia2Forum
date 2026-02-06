@@ -5,7 +5,7 @@ from channels.layers import get_channel_layer
 from django.contrib import messages
 from django.contrib.auth import get_user_model, login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
-from django.db import OperationalError, ProgrammingError
+from django.db import OperationalError, ProgrammingError, connection
 from django.core.paginator import Paginator
 from django.db.models import Count, Q
 from django.http import HttpResponseForbidden, JsonResponse
@@ -51,6 +51,24 @@ from .online_presence import get_online_usernames
 User = get_user_model()
 MENTION_RE = re.compile(r"(?<!\w)@([A-Za-z0-9_]{3,150})")
 
+
+
+
+def _forum_schema_ready() -> bool:
+    """Return True when DB has new forum columns/tables used by current code."""
+    try:
+        with connection.cursor() as cursor:
+            topic_columns = {c.name for c in connection.introspection.get_table_description(cursor, Topic._meta.db_table)}
+            required_topic_columns = {"prefix", "status", "is_pinned"}
+            if not required_topic_columns.issubset(topic_columns):
+                return False
+
+            tables = set(connection.introspection.table_names(cursor))
+            tag_table = Tag._meta.db_table
+            topic_tags_table = Topic.tags.through._meta.db_table
+            return tag_table in tables and topic_tags_table in tables
+    except Exception:
+        return False
 
 def _log_activity(actor, verb, topic=None, post=None, comment=None):
     Activity.objects.create(actor=actor, verb=verb, topic=topic, post=post, comment=comment)
@@ -162,7 +180,12 @@ def _build_profile_context(user_obj: User, is_own_profile: bool):
 
 
 def home(request):
-    topics_qs = Topic.objects.select_related("author", "category").prefetch_related("tags", "comments")
+    schema_ready = _forum_schema_ready()
+    topics_qs = Topic.objects.select_related("author", "category")
+    if schema_ready:
+        topics_qs = topics_qs.prefetch_related("tags", "comments")
+    else:
+        topics_qs = topics_qs.defer("prefix", "status", "is_pinned")
 
     q = (request.GET.get("q") or "").strip()
     category = (request.GET.get("category") or "").strip()
@@ -179,21 +202,32 @@ def home(request):
         )
     if category:
         topics_qs = topics_qs.filter(category__slug=category)
-    if prefix:
-        topics_qs = topics_qs.filter(prefix=prefix)
-    if status:
-        topics_qs = topics_qs.filter(status=status)
-    if tag:
-        topics_qs = topics_qs.filter(tags__slug=tag)
 
-    if sort == "popular":
-        topics_qs = topics_qs.annotate(likes_total=Count("likes", distinct=True)).order_by("-is_pinned", "-likes_total", "-created_at")
-    elif sort == "comments":
-        topics_qs = topics_qs.annotate(comments_total=Count("comments", distinct=True)).order_by("-is_pinned", "-comments_total", "-created_at")
-    elif sort == "old":
-        topics_qs = topics_qs.order_by("-is_pinned", "created_at")
+    if schema_ready:
+        if prefix:
+            topics_qs = topics_qs.filter(prefix=prefix)
+        if status:
+            topics_qs = topics_qs.filter(status=status)
+        if tag:
+            topics_qs = topics_qs.filter(tags__slug=tag)
+
+        if sort == "popular":
+            topics_qs = topics_qs.annotate(likes_total=Count("likes", distinct=True)).order_by("-is_pinned", "-likes_total", "-created_at")
+        elif sort == "comments":
+            topics_qs = topics_qs.annotate(comments_total=Count("comments", distinct=True)).order_by("-is_pinned", "-comments_total", "-created_at")
+        elif sort == "old":
+            topics_qs = topics_qs.order_by("-is_pinned", "created_at")
+        else:
+            topics_qs = topics_qs.order_by("-is_pinned", "-created_at")
     else:
-        topics_qs = topics_qs.order_by("-is_pinned", "-created_at")
+        if sort == "popular":
+            topics_qs = topics_qs.annotate(likes_total=Count("likes", distinct=True)).order_by("-likes_total", "-created_at")
+        elif sort == "comments":
+            topics_qs = topics_qs.annotate(comments_total=Count("comments", distinct=True)).order_by("-comments_total", "-created_at")
+        elif sort == "old":
+            topics_qs = topics_qs.order_by("created_at")
+        else:
+            topics_qs = topics_qs.order_by("-created_at")
 
     paginator = Paginator(topics_qs.distinct(), 10)
     page_obj = paginator.get_page(request.GET.get("page"))
@@ -201,9 +235,16 @@ def home(request):
 
     last_posts = {t.id: t.posts.order_by("-created_at").first() for t in topics if t.posts.exists()}
     activities = Activity.objects.select_related("actor", "topic", "post", "comment").order_by("-created_at")[:20]
-    family_ops = FamilyOperation.objects.select_related("coordinator").prefetch_related("participants").order_by("scheduled_for")[:5]
-    dossiers = FactionDossier.objects.select_related("author").order_by("-updated_at")[:5]
-    family_tasks = FamilyTask.objects.select_related("assignee", "created_by").order_by("status", "due_at", "-created_at")[:6]
+
+    if schema_ready:
+        family_ops = FamilyOperation.objects.select_related("coordinator").prefetch_related("participants").order_by("scheduled_for")[:5]
+        dossiers = FactionDossier.objects.select_related("author").order_by("-updated_at")[:5]
+        family_tasks = FamilyTask.objects.select_related("assignee", "created_by").order_by("status", "due_at", "-created_at")[:6]
+    else:
+        family_ops = []
+        dossiers = []
+        family_tasks = []
+
     family_members = User.objects.order_by("username")
 
     return render(request, "main/home.html", {
@@ -226,6 +267,8 @@ def home(request):
         "family_tasks": family_tasks,
         "can_manage_family_data": _can_manage_family_data(request.user),
         "family_members": family_members,
+        "forum_schema_ready": schema_ready,
+        "is_legacy_db": not schema_ready,
     })
 
 
@@ -354,6 +397,10 @@ def change_password_view(request):
 
 @login_required
 def create_topic_simple(request):
+    if not _forum_schema_ready():
+        messages.error(request, "База данных не обновлена. Выполните: python manage.py migrate")
+        return redirect("home")
+
     if request.method == "POST":
         form = TopicCreateForm(request.POST, request.FILES)
         if form.is_valid():
@@ -373,6 +420,10 @@ def create_topic_simple(request):
 
 
 def topic_detail(request, topic_id):
+    if not _forum_schema_ready():
+        messages.error(request, "База данных не обновлена. Выполните: python manage.py migrate")
+        return redirect("home")
+
     topic = get_object_or_404(Topic, id=topic_id)
     posts = topic.posts.all().order_by("created_at")
     comments = Comment.objects.filter(topic=topic, post__isnull=True, parent__isnull=True).order_by("created_at")
