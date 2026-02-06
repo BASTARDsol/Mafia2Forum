@@ -157,9 +157,22 @@ def _create_like_notification(*, actor: User, recipient: User, message: str, top
     _push_header_counters(recipient)
 
 
+def _create_task_notification(*, actor: User, recipient: User, message: str):
+    if actor == recipient:
+        return
+    Notification.objects.create(
+        recipient=recipient,
+        actor=actor,
+        notification_type=Notification.TYPE_TASK,
+        message=message,
+    )
+    _push_header_counters(recipient)
+
+
 def _build_profile_context(user_obj: User, is_own_profile: bool):
     recent_topics = user_obj.topics.select_related("category").order_by("-created_at")[:5]
     recent_posts = user_obj.posts.select_related("topic").order_by("-created_at")[:5]
+    received_tasks = FamilyTask.objects.select_related("created_by").filter(assignee=user_obj).order_by("status", "due_at", "-created_at")[:10]
     stats = {
         "topics_count": user_obj.topics.count(),
         "posts_count": user_obj.posts.count(),
@@ -175,6 +188,7 @@ def _build_profile_context(user_obj: User, is_own_profile: bool):
         "stats": stats,
         "recent_topics": recent_topics,
         "recent_posts": recent_posts,
+        "received_tasks": received_tasks,
         "is_online": is_online,
     }
 
@@ -961,8 +975,73 @@ def create_family_task(request):
         task = form.save(commit=False)
         task.created_by = request.user
         task.save()
+        assignee = task.assignee
+        if assignee:
+            _create_task_notification(
+                actor=request.user,
+                recipient=assignee,
+                message=f"Вам выдали поручение: «{task.title}».",
+            )
         _broadcast_site_event("family_task_updated", {"task_id": task.id, "assignee_id": task.assignee_id})
         messages.success(request, "Поручение создано.")
     else:
         messages.error(request, "Не удалось создать поручение. Проверьте поля формы.")
+    return redirect("home")
+
+
+@login_required
+@require_POST
+def claim_family_task(request, task_id):
+    if not _forum_schema_ready():
+        messages.error(request, "База данных не обновлена. Выполните: python manage.py migrate")
+        return redirect("home")
+
+    task = get_object_or_404(FamilyTask, id=task_id)
+    if task.status != FamilyTask.STATUS_OPEN:
+        messages.warning(request, "Это поручение уже взято или закрыто.")
+        return redirect("home")
+
+    if task.assignee and task.assignee != request.user and not _can_manage_family_data(request.user):
+        messages.error(request, "Поручение уже назначено другому участнику.")
+        return redirect("home")
+
+    task.assignee = request.user
+    task.status = FamilyTask.STATUS_IN_PROGRESS
+    task.save(update_fields=["assignee", "status"])
+
+    if task.created_by_id != request.user.id:
+        _create_task_notification(
+            actor=request.user,
+            recipient=task.created_by,
+            message=f"{request.user.username} взял(а) поручение: «{task.title}».",
+        )
+
+    _broadcast_site_event("family_task_updated", {"task_id": task.id, "assignee_id": task.assignee_id})
+    messages.success(request, "Вы взяли поручение в работу.")
+    return redirect("home")
+
+
+@login_required
+@require_POST
+def complete_family_task(request, task_id):
+    if not _forum_schema_ready():
+        messages.error(request, "База данных не обновлена. Выполните: python manage.py migrate")
+        return redirect("home")
+
+    task = get_object_or_404(FamilyTask, id=task_id)
+    if task.assignee_id != request.user.id and not _can_manage_family_data(request.user):
+        return HttpResponseForbidden("Закрыть поручение может исполнитель или старший ранг.")
+
+    task.status = FamilyTask.STATUS_DONE
+    task.save(update_fields=["status"])
+
+    if task.created_by_id != request.user.id:
+        _create_task_notification(
+            actor=request.user,
+            recipient=task.created_by,
+            message=f"Поручение «{task.title}» отмечено как выполненное.",
+        )
+
+    _broadcast_site_event("family_task_updated", {"task_id": task.id, "assignee_id": task.assignee_id})
+    messages.success(request, "Поручение закрыто.")
     return redirect("home")

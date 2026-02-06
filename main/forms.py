@@ -157,3 +157,7 @@ class FamilyTaskForm(forms.ModelForm):
             "description": forms.Textarea(attrs={"rows": 3, "placeholder": "Что именно нужно сделать"}),
             "due_at": forms.DateTimeInput(attrs={"type": "datetime-local"}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["assignee"].required = False

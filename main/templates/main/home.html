@@ -227,6 +227,7 @@
 
 <div class="card" style="margin-top:20px;">
   <h3 style="margin-top:0; color:#d4af37;">📋 Поручения семьи</h3>
+  <div style="font-size:12px; color:#9b9b9b; margin-bottom:8px;">Старшие ранги выдают поручения, участники могут брать свободные задачи.</div>
   {% if family_tasks %}
     <div style="display:grid; gap:10px;">
       {% for task in family_tasks %}
@@ -236,7 +237,24 @@
             <span style="font-size:12px; color:#aaa;">{{ task.get_status_display }} · +{{ task.reward_points }} RP</span>
           </div>
           <div style="font-size:13px; color:#ddd; margin-top:4px;">{{ task.description|truncatechars:130 }}</div>
-          <div style="font-size:12px; color:#888; margin-top:5px;">Исполнитель: {{ task.assignee.username }}{% if task.due_at %} · дедлайн {{ task.due_at|date:"d.m.Y H:i" }}{% endif %}</div>
+          <div style="font-size:12px; color:#888; margin-top:5px;">
+            Исполнитель: {% if task.assignee %}{{ task.assignee.username }}{% else %}<span style="color:#ffd37a;">не назначен</span>{% endif %}
+            {% if task.due_at %} · дедлайн {{ task.due_at|date:"d.m.Y H:i" }}{% endif %}
+          </div>
+          <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
+            {% if user.is_authenticated and task.status == 'open' %}
+              <form method="post" action="{% url 'claim-family-task' task.id %}" style="margin:0;">
+                {% csrf_token %}
+                <button type="submit" style="padding:6px 10px; font-size:12px;">Взять задание</button>
+              </form>
+            {% endif %}
+            {% if user.is_authenticated and task.assignee_id == user.id and task.status != 'done' %}
+              <form method="post" action="{% url 'complete-family-task' task.id %}" style="margin:0;">
+                {% csrf_token %}
+                <button type="submit" style="padding:6px 10px; font-size:12px;">Отметить выполненным</button>
+              </form>
+            {% endif %}
+          </div>
         </div>
       {% endfor %}
     </div>
@@ -250,8 +268,8 @@
         {% csrf_token %}
         <input type="text" name="title" placeholder="Название поручения" required>
         <textarea name="description" rows="3" placeholder="Описание задачи" required></textarea>
-        <select name="assignee" required>
-          <option value="">Исполнитель</option>
+        <select name="assignee">
+          <option value="">Без исполнителя (свободное поручение)</option>
           {% for forum_user in family_members %}
             <option value="{{ forum_user.id }}">{{ forum_user.username }} ({{ forum_user.get_family_rank_display }})</option>
           {% endfor %}
