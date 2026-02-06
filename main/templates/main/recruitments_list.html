@@ -1,0 +1,18 @@
+{% extends "main/base.html" %}
+
+{% block content %}
+<h2 class="page-title">Кадровый контур</h2>
+<p><a class="header-btn" href="{% url 'recruitment-create' %}">Новая анкета</a></p>
+
+{% for application in applications %}
+<div class="card">
+    <h3>{{ application.nickname }}</h3>
+    <p><strong>Статус:</strong> {{ application.get_status_display }}</p>
+    <p><strong>Вербовщик:</strong> {{ application.recruiter.username }}</p>
+    <p><strong>Куратор:</strong> {{ application.curator.username|default:"—" }}</p>
+    <p><strong>Комментарий:</strong> {{ application.decision_comment|default:"—" }}</p>
+</div>
+{% empty %}
+<div class="card"><p>Анкет пока нет.</p></div>
+{% endfor %}
+{% endblock %}

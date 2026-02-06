@@ -1,0 +1,37 @@
+{% extends "main/base.html" %}
+
+{% block content %}
+<h2 class="page-title">{{ operation.title }}</h2>
+<div class="card">
+    <p><strong>Цель:</strong> {{ operation.goal }}</p>
+    <p><strong>Координатор:</strong> {{ operation.coordinator.username }}</p>
+    <p><strong>Статус:</strong> {{ operation.get_status_display }}</p>
+    <p><strong>Участники:</strong>
+        {% for participant in operation.participants.all %}
+            {{ participant.username }}{% if not forloop.last %}, {% endif %}
+        {% empty %}
+            —
+        {% endfor %}
+    </p>
+    <p><strong>Итог:</strong> {{ operation.result|default:"—" }}</p>
+    <p><strong>Уроки:</strong> {{ operation.lessons_learned|default:"—" }}</p>
+</div>
+
+<div class="card">
+    <h3>Чек-лист</h3>
+    <form method="post" action="{% url 'operation-checklist-add' operation.id %}">
+        {% csrf_token %}
+        {{ checklist_form.as_p }}
+        <button type="submit">Добавить пункт</button>
+    </form>
+
+    {% for item in operation.checklist_items.all %}
+    <form method="post" action="{% url 'operation-checklist-toggle' item.id %}">
+        {% csrf_token %}
+        <button type="submit">{% if item.is_done %}✅{% else %}⬜{% endif %} {{ item.title }}</button>
+    </form>
+    {% empty %}
+    <p>Чек-лист пока пуст.</p>
+    {% endfor %}
+</div>
+{% endblock %}

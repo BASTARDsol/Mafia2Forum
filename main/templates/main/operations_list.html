@@ -1,0 +1,17 @@
+{% extends "main/base.html" %}
+
+{% block content %}
+<h2 class="page-title">Операции семьи</h2>
+<p><a class="header-btn" href="{% url 'operation-create' %}">Создать операцию</a></p>
+
+{% for operation in operations %}
+<div class="card">
+    <h3><a href="{% url 'operation-detail' operation.id %}">{{ operation.title }}</a></h3>
+    <p><strong>Координатор:</strong> {{ operation.coordinator.username }}</p>
+    <p><strong>Статус:</strong> {{ operation.get_status_display }}</p>
+    <p><strong>Время:</strong> {{ operation.scheduled_for|date:"d.m.Y H:i" }}</p>
+</div>
+{% empty %}
+<div class="card"><p>Пока операций нет.</p></div>
+{% endfor %}
+{% endblock %}

@@ -1,7 +1,17 @@
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm, PasswordChangeForm, UserCreationForm
 
-from .models import Comment, CustomUser, Message, Post, Profile, Topic
+from .models import (
+    Comment,
+    CustomUser,
+    Message,
+    Operation,
+    OperationChecklistItem,
+    Post,
+    Profile,
+    RecruitmentApplication,
+    Topic,
+)
 
 
 class CustomUserCreationForm(UserCreationForm):
@@ -102,4 +112,33 @@ class MessageForm(forms.ModelForm):
             "content": forms.Textarea(attrs={"rows": 2, "placeholder": "Введите сообщение..."}),
             "image": forms.ClearableFileInput(attrs={'accept': 'image/*'}),
             "attachment": forms.ClearableFileInput(),
+        }
+
+
+class OperationForm(forms.ModelForm):
+    class Meta:
+        model = Operation
+        fields = ["title", "goal", "coordinator", "participants", "scheduled_for", "status", "result", "lessons_learned"]
+        widgets = {
+            "goal": forms.Textarea(attrs={"rows": 3}),
+            "participants": forms.SelectMultiple(attrs={"size": 5}),
+            "scheduled_for": forms.DateTimeInput(attrs={"type": "datetime-local"}),
+            "result": forms.Textarea(attrs={"rows": 3}),
+            "lessons_learned": forms.Textarea(attrs={"rows": 3}),
+        }
+
+
+class OperationChecklistItemForm(forms.ModelForm):
+    class Meta:
+        model = OperationChecklistItem
+        fields = ["title"]
+
+
+class RecruitmentApplicationForm(forms.ModelForm):
+    class Meta:
+        model = RecruitmentApplication
+        fields = ["nickname", "recruiter", "background", "status", "curator", "decision_comment"]
+        widgets = {
+            "background": forms.Textarea(attrs={"rows": 4}),
+            "decision_comment": forms.Textarea(attrs={"rows": 3}),
         }

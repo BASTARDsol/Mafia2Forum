@@ -1,7 +1,17 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 
-from .models import CustomUser, Profile, Category, Topic, Post, Comment
+from .models import (
+    Category,
+    Comment,
+    CustomUser,
+    Operation,
+    OperationChecklistItem,
+    Post,
+    Profile,
+    RecruitmentApplication,
+    Topic,
+)
 
 
 @admin.register(CustomUser)
@@ -28,3 +38,6 @@ admin.site.register(Profile)
 admin.site.register(Topic)
 admin.site.register(Post)
 admin.site.register(Comment)
+admin.site.register(Operation)
+admin.site.register(OperationChecklistItem)
+admin.site.register(RecruitmentApplication)

@@ -18,8 +18,11 @@ from .forms import (
     CustomPasswordChangeForm,
     CustomUserCreationForm,
     MessageForm,
+    OperationChecklistItemForm,
+    OperationForm,
     PostCreateForm,
     ProfileUpdateForm,
+    RecruitmentApplicationForm,
     TopicCreateForm,
     UserUpdateForm,
 )
@@ -32,7 +35,10 @@ from .models import (
     Message,
     MessageRead,
     Notification,
+    Operation,
+    OperationChecklistItem,
     Post,
+    RecruitmentApplication,
     Topic,
     TopicSubscription,
 )
@@ -482,6 +488,105 @@ def terms(request):
 
 def privacy(request):
     return render(request, "main/privacy.html")
+
+
+def _can_manage_family_tools(user):
+    return user.is_authenticated and user.mafia_rank in {
+        user.RANK_CAPO,
+        user.RANK_CONSIGLIERE,
+        user.RANK_DON,
+    }
+
+
+@login_required
+def operations_list(request):
+    if not _can_manage_family_tools(request.user):
+        return HttpResponseForbidden("Недостаточно прав для просмотра операций.")
+    operations = Operation.objects.select_related("coordinator").prefetch_related("participants").all()
+    return render(request, "main/operations_list.html", {"operations": operations})
+
+
+@login_required
+def operation_create(request):
+    if not _can_manage_family_tools(request.user):
+        return HttpResponseForbidden("Недостаточно прав для создания операций.")
+    if request.method == "POST":
+        form = OperationForm(request.POST)
+        if form.is_valid():
+            operation = form.save()
+            _log_activity(request.user, "создал(а) операцию")
+            messages.success(request, "Операция создана.")
+            return redirect("operation-detail", operation_id=operation.id)
+    else:
+        form = OperationForm(initial={"coordinator": request.user})
+    return render(request, "main/operation_form.html", {"form": form, "title": "Новая операция"})
+
+
+@login_required
+def operation_detail(request, operation_id):
+    if not _can_manage_family_tools(request.user):
+        return HttpResponseForbidden("Недостаточно прав для просмотра операции.")
+    operation = get_object_or_404(Operation.objects.select_related("coordinator").prefetch_related("participants", "checklist_items"), id=operation_id)
+    checklist_form = OperationChecklistItemForm()
+    return render(request, "main/operation_detail.html", {"operation": operation, "checklist_form": checklist_form})
+
+
+@login_required
+@require_POST
+def operation_add_checklist_item(request, operation_id):
+    if not _can_manage_family_tools(request.user):
+        return HttpResponseForbidden("Недостаточно прав для изменения операции.")
+    operation = get_object_or_404(Operation, id=operation_id)
+    form = OperationChecklistItemForm(request.POST)
+    if form.is_valid():
+        item = form.save(commit=False)
+        item.operation = operation
+        item.save()
+        messages.success(request, "Пункт чек-листа добавлен.")
+    else:
+        messages.error(request, "Не удалось добавить пункт чек-листа.")
+    return redirect("operation-detail", operation_id=operation.id)
+
+
+@login_required
+@require_POST
+def operation_toggle_checklist_item(request, item_id):
+    if not _can_manage_family_tools(request.user):
+        return HttpResponseForbidden("Недостаточно прав для изменения чек-листа.")
+    item = get_object_or_404(OperationChecklistItem.objects.select_related("operation"), id=item_id)
+    item.is_done = not item.is_done
+    if item.is_done:
+        item.completed_by = request.user
+        item.completed_at = timezone.now()
+    else:
+        item.completed_by = None
+        item.completed_at = None
+    item.save(update_fields=["is_done", "completed_by", "completed_at"])
+    return redirect("operation-detail", operation_id=item.operation_id)
+
+
+@login_required
+def recruitments_list(request):
+    if not _can_manage_family_tools(request.user):
+        return HttpResponseForbidden("Недостаточно прав для просмотра кадрового контура.")
+    applications = RecruitmentApplication.objects.select_related("recruiter", "curator").all()
+    return render(request, "main/recruitments_list.html", {"applications": applications})
+
+
+@login_required
+def recruitment_create(request):
+    if not _can_manage_family_tools(request.user):
+        return HttpResponseForbidden("Недостаточно прав для создания анкеты.")
+    if request.method == "POST":
+        form = RecruitmentApplicationForm(request.POST)
+        if form.is_valid():
+            application = form.save()
+            _log_activity(request.user, "добавил(а) кандидата")
+            messages.success(request, "Анкета кандидата создана.")
+            return redirect("recruitments")
+    else:
+        form = RecruitmentApplicationForm(initial={"recruiter": request.user})
+    return render(request, "main/recruitment_form.html", {"form": form})
 
 
 @login_required

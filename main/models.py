@@ -9,7 +9,19 @@ from django.dispatch import receiver
 
 
 class CustomUser(AbstractUser):
+    RANK_SOLDATO = "soldato"
+    RANK_CAPO = "capo"
+    RANK_CONSIGLIERE = "consigliere"
+    RANK_DON = "don"
+    RANK_CHOICES = (
+        (RANK_SOLDATO, "Soldato"),
+        (RANK_CAPO, "Capo"),
+        (RANK_CONSIGLIERE, "Consigliere"),
+        (RANK_DON, "Don"),
+    )
+
     is_forum_admin = models.BooleanField(default=False)
+    mafia_rank = models.CharField(max_length=20, choices=RANK_CHOICES, default=RANK_SOLDATO)
 
     groups = models.ManyToManyField(
         Group,
@@ -289,3 +301,75 @@ class Activity(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
+
+
+class Operation(models.Model):
+    STATUS_PLANNED = "planned"
+    STATUS_ACTIVE = "active"
+    STATUS_DONE = "done"
+    STATUS_CHOICES = (
+        (STATUS_PLANNED, "Запланирована"),
+        (STATUS_ACTIVE, "В процессе"),
+        (STATUS_DONE, "Завершена"),
+    )
+
+    title = models.CharField(max_length=200)
+    goal = models.TextField()
+    coordinator = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="coordinated_operations")
+    participants = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name="operations", blank=True)
+    scheduled_for = models.DateTimeField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PLANNED)
+    result = models.TextField(blank=True)
+    lessons_learned = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-scheduled_for"]
+
+    def __str__(self):
+        return self.title
+
+
+class OperationChecklistItem(models.Model):
+    operation = models.ForeignKey(Operation, on_delete=models.CASCADE, related_name="checklist_items")
+    title = models.CharField(max_length=200)
+    is_done = models.BooleanField(default=False)
+    completed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="completed_checklist_items")
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["id"]
+
+    def __str__(self):
+        return f"{self.operation.title}: {self.title}"
+
+
+class RecruitmentApplication(models.Model):
+    STATUS_NEW = "new"
+    STATUS_CHECK = "check"
+    STATUS_TRIAL = "trial"
+    STATUS_APPROVED = "approved"
+    STATUS_REJECTED = "rejected"
+    STATUS_CHOICES = (
+        (STATUS_NEW, "Новая"),
+        (STATUS_CHECK, "Проверка"),
+        (STATUS_TRIAL, "Испытательный срок"),
+        (STATUS_APPROVED, "Принят"),
+        (STATUS_REJECTED, "Отклонён"),
+    )
+
+    nickname = models.CharField(max_length=150)
+    recruiter = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="recruitment_applications")
+    background = models.TextField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_NEW)
+    curator = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="curated_candidates")
+    decision_comment = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.nickname} ({self.get_status_display()})"
