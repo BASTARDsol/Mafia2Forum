@@ -44,7 +44,7 @@
           </span>
         </button>
 
-        {% if user.is_authenticated %}
+        {% if user.is_authenticated and not topic.is_closed %}
           <button
             type="button"
             class="comment-reply-toggle"
@@ -63,7 +63,7 @@
 
       </div>
 
-      {% if user.is_authenticated %}
+      {% if user.is_authenticated and not topic.is_closed %}
         <form
           id="reply-form-{{ comment.id }}"
           method="post"

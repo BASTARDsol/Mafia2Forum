@@ -29,14 +29,23 @@
 
     <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
       {% if topic.is_pinned %}<span style="font-size:11px; color:#ffdb63; border:1px solid #d4af37; border-radius:999px; padding:2px 8px;">📌 Закреп</span>{% endif %}
+      {% if topic.is_closed %}<span style="font-size:11px; color:#ff9b9b; border:1px solid #a34a4a; border-radius:999px; padding:2px 8px;">🔒 Закрыта</span>{% endif %}
       <span style="font-size:11px; border:1px solid #555; border-radius:999px; padding:2px 8px;">{{ topic.get_prefix_display }}</span>
       <span style="font-size:11px; border:1px solid {% if topic.status == 'solved' %}#2d8f4e{% else %}#777{% endif %}; color:{% if topic.status == 'solved' %}#78e39c{% else %}#ccc{% endif %}; border-radius:999px; padding:2px 8px;">{{ topic.get_status_display }}</span>
+      {% if topic.auto_close_at %}
+        <span style="font-size:11px; color:#ffdb63; border:1px solid #6b5f2a; border-radius:999px; padding:2px 8px;">⏳ Автозакрытие {{ topic.auto_close_at|date:"d.m.Y H:i" }}</span>
+      {% endif %}
       {% for t in topic.tags.all %}
         <a href="{% url 'home' %}?tag={{ t.slug }}" style="font-size:11px; color:#d4af37;">#{{ t.name }}</a>
       {% endfor %}
     </div>
 
     <div class="vk-title">{{ topic.title }}</div>
+    {% if topic.is_closed %}
+      <div class="card" style="padding:10px; margin:8px 0; border:1px solid #a34a4a; color:#ffb3b3; background:#1a1214;">
+        🔒 Тема закрыта. Новые ответы и комментарии недоступны.
+      </div>
+    {% endif %}
 
     <div class="js-collapsible" data-collapsed="1">
       <div class="vk-text-inner">
@@ -84,6 +93,25 @@
       {% endif %}
       <span class="subscriber-pill">Подписчиков: {{ subscriber_count }}</span>
     </div>
+    {% if can_moderate %}
+      <div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:10px; align-items:center;">
+        <form method="post" action="{% url 'topic-toggle-closed' topic.id %}" style="margin:0;">
+          {% csrf_token %}
+          <button type="submit" class="header-btn btn-compact">
+            {% if topic.is_closed %}Открыть тему{% else %}Закрыть тему{% endif %}
+          </button>
+        </form>
+        <form method="post" action="{% url 'topic-auto-close' topic.id %}" style="margin:0; display:flex; gap:8px; align-items:center;">
+          {% csrf_token %}
+          <select name="auto_close_days" style="margin:0; width:auto; min-width:220px;">
+            {% for days, label in auto_close_choices %}
+              <option value="{{ days }}" {% if days == selected_auto_close_days %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+          <button type="submit" class="header-btn btn-compact">Применить</button>
+        </form>
+      </div>
+    {% endif %}
 
 
     <!-- ===== КОММЕНТЫ (слегка видны + кнопка раскрыть) ===== -->
@@ -98,7 +126,7 @@
         <button type="button" class="comments-showmore">Развернуть комментарии</button>
       {% endif %}
 
-      {% if user.is_authenticated %}
+      {% if user.is_authenticated and not topic.is_closed %}
       <form method="post" enctype="multipart/form-data" class="new-comment-form media-form">
         {% csrf_token %}
 
@@ -123,6 +151,8 @@
 
         <button type="submit" class="reply-btn">Отправить</button>
       </form>
+      {% elif topic.is_closed %}
+        <div style="margin-top:10px; color:#b9b9b9; font-size:13px;">Комментарии отключены, так как тема закрыта.</div>
       {% endif %}
     </div>
 

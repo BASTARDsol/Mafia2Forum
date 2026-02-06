@@ -160,6 +160,9 @@ class Topic(models.Model):
     prefix = models.CharField(max_length=20, choices=PREFIX_CHOICES, default=PREFIX_DISCUSSION)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_OPEN)
     is_pinned = models.BooleanField(default=False)
+    is_closed = models.BooleanField(default=False)
+    closed_at = models.DateTimeField(null=True, blank=True)
+    auto_close_at = models.DateTimeField(null=True, blank=True)
     image = models.ImageField(upload_to="topics/", blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
