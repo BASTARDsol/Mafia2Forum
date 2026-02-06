@@ -1,0 +1,108 @@
+{% extends 'main/base.html' %}
+
+{% block content %}
+<h2 class="page-title">🏛️ Штаб семьи</h2>
+
+<div class="card" style="margin-top:20px;">
+  <h3 style="margin-top:0; color:#d4af37;">🎯 Операции семьи</h3>
+  {% if family_ops %}
+    <div style="display:grid; gap:10px;">
+      {% for op in family_ops %}
+        <div style="padding:10px; border:1px solid #2f2f36; border-radius:10px; background:#15151b;">
+          <div style="display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap;">
+            <strong>{{ op.title }}</strong>
+            <span style="font-size:12px; color:#aaa;">{{ op.get_status_display }}</span>
+          </div>
+          <div style="font-size:13px; color:#ddd; margin-top:4px;">{{ op.description|truncatechars:130 }}</div>
+          <div style="font-size:12px; color:#888; margin-top:5px;">Координатор: {{ op.coordinator.username }}{% if op.scheduled_for %} · {{ op.scheduled_for|date:"d.m.Y H:i" }}{% endif %}</div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}<div style="color:#888;">Операций пока нет.</div>{% endif %}
+  {% if can_manage_family_data %}
+    <details style="margin-top:10px;"><summary style="cursor:pointer; color:#ffdb63;">+ Добавить операцию</summary>
+      <form method="post" action="{% url 'create-family-operation' %}" style="margin-top:10px;">{% csrf_token %}
+        <input type="text" name="title" placeholder="Название операции" required>
+        <textarea name="description" rows="3" placeholder="Описание" required></textarea>
+        <input type="datetime-local" name="scheduled_for">
+        <select name="status"><option value="planned">Планируется</option><option value="active">В процессе</option><option value="completed">Завершена</option><option value="failed">Провалена</option></select>
+        <button type="submit">Сохранить операцию</button>
+      </form>
+    </details>
+  {% endif %}
+</div>
+
+<div class="card" style="margin-top:20px;">
+  <h3 style="margin-top:0; color:#d4af37;">🕵️ Досье</h3>
+  {% if dossiers %}
+    <div style="display:grid; gap:10px;">
+      {% for dossier in dossiers %}
+        <div style="padding:10px; border:1px solid #2f2f36; border-radius:10px; background:#15151b;">
+          <div style="display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap;">
+            <strong>{{ dossier.name }}</strong>
+            <span style="font-size:12px; color:#aaa;">{{ dossier.get_alignment_display }} · {{ dossier.get_threat_level_display }}</span>
+          </div>
+          <div style="font-size:13px; color:#ddd; margin-top:4px;">{{ dossier.notes|truncatechars:160 }}</div>
+          <div style="font-size:12px; color:#888; margin-top:5px;">Обновил: {{ dossier.author.username }}</div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}<div style="color:#888;">Досье пока пусты.</div>{% endif %}
+  {% if can_manage_family_data %}
+    <details style="margin-top:10px;"><summary style="cursor:pointer; color:#ffdb63;">+ Добавить досье</summary>
+      <form method="post" action="{% url 'create-faction-dossier' %}" style="margin-top:10px;">{% csrf_token %}
+        <input type="text" name="name" placeholder="Имя/фракция" required>
+        <select name="alignment"><option value="ally">Союзник</option><option value="neutral">Нейтрал</option><option value="enemy">Враг</option></select>
+        <select name="threat_level"><option value="low">Низкий</option><option value="medium">Средний</option><option value="high">Высокий</option><option value="critical">Критический</option></select>
+        <textarea name="notes" rows="3" placeholder="Наблюдения" required></textarea>
+        <input type="url" name="evidence_link" placeholder="Ссылка на доказательства (опционально)">
+        <button type="submit">Сохранить досье</button>
+      </form>
+    </details>
+  {% endif %}
+</div>
+
+<div class="card" style="margin-top:20px;">
+  <h3 style="margin-top:0; color:#d4af37;">📋 Поручения семьи</h3>
+  {% if family_tasks %}
+    <div style="display:grid; gap:10px;">
+      {% for task in family_tasks %}
+        <div style="padding:10px; border:1px solid #2f2f36; border-radius:10px; background:#15151b;">
+          <div style="display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap;">
+            <strong>{{ task.title }}</strong>
+            <span style="font-size:12px; color:#aaa;">{{ task.get_status_display }} · +{{ task.reward_points }} RP</span>
+          </div>
+          <div style="font-size:13px; color:#ddd; margin-top:4px;">{{ task.description|truncatechars:130 }}</div>
+          <div style="font-size:12px; color:#888; margin-top:5px;">
+            Исполнитель: {% if task.assignee %}{{ task.assignee.username }}{% else %}<span style="color:#ffd37a;">не назначен</span>{% endif %}
+            {% if task.due_at %} · дедлайн {{ task.due_at|date:"d.m.Y H:i" }}{% endif %}
+          </div>
+          <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
+            {% if user.is_authenticated and task.status == 'open' %}
+              <form method="post" action="{% url 'claim-family-task' task.id %}" style="margin:0;">{% csrf_token %}<button type="submit" style="padding:6px 10px; font-size:12px;">Взять задание</button></form>
+            {% endif %}
+            {% if user.is_authenticated and task.status != 'done' %}
+              {% if task.assignee_id == user.id or can_manage_family_data %}
+                <form method="post" action="{% url 'complete-family-task' task.id %}" style="margin:0;">{% csrf_token %}<button type="submit" style="padding:6px 10px; font-size:12px;">Отметить выполненным</button></form>
+              {% endif %}
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}<div style="color:#888;">Поручений пока нет.</div>{% endif %}
+  {% if can_manage_family_data %}
+    <details style="margin-top:10px;"><summary style="cursor:pointer; color:#ffdb63;">+ Выдать поручение</summary>
+      <form method="post" action="{% url 'create-family-task' %}" style="margin-top:10px;">{% csrf_token %}
+        <input type="text" name="title" placeholder="Название поручения" required>
+        <textarea name="description" rows="3" placeholder="Описание задачи" required></textarea>
+        <select name="assignee"><option value="">Без исполнителя (свободное поручение)</option>{% for forum_user in family_members %}<option value="{{ forum_user.id }}">{{ forum_user.username }} ({{ forum_user.get_family_rank_display }})</option>{% endfor %}</select>
+        <input type="datetime-local" name="due_at">
+        <select name="status"><option value="open">Открыта</option><option value="in_progress">Выполняется</option><option value="done">Выполнена</option></select>
+        <input type="number" name="reward_points" min="0" value="0" placeholder="RP очки">
+        <button type="submit">Создать поручение</button>
+      </form>
+    </details>
+  {% endif %}
+</div>
+{% endblock %}

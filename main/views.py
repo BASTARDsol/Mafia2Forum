@@ -250,16 +250,6 @@ def home(request):
     last_posts = {t.id: t.posts.order_by("-created_at").first() for t in topics if t.posts.exists()}
     activities = Activity.objects.select_related("actor", "topic", "post", "comment").order_by("-created_at")[:20]
 
-    if schema_ready:
-        family_ops = FamilyOperation.objects.select_related("coordinator").prefetch_related("participants").order_by("scheduled_for")[:5]
-        dossiers = FactionDossier.objects.select_related("author").order_by("-updated_at")[:5]
-        family_tasks = FamilyTask.objects.select_related("assignee", "created_by").order_by("status", "due_at", "-created_at")[:6]
-    else:
-        family_ops = []
-        dossiers = []
-        family_tasks = []
-
-    family_members = User.objects.order_by("username")
 
     return render(request, "main/home.html", {
         "topics": topics,
@@ -276,11 +266,6 @@ def home(request):
         "popular_tags": Tag.objects.annotate(topics_count=Count("topics")).order_by("-topics_count", "name")[:20],
         "prefix_choices": Topic.PREFIX_CHOICES,
         "status_choices": Topic.STATUS_CHOICES,
-        "family_ops": family_ops,
-        "dossiers": dossiers,
-        "family_tasks": family_tasks,
-        "can_manage_family_data": _can_manage_family_data(request.user),
-        "family_members": family_members,
         "forum_schema_ready": schema_ready,
         "is_legacy_db": not schema_ready,
     })
@@ -290,10 +275,6 @@ def news(request):
     news_topics = Topic.objects.filter(category__name="Новости").order_by("-created_at")
     return render(request, "main/news.html", {"news_list": news_topics})
 
-
-def events(request):
-    event_topics = Topic.objects.filter(category__name="Ивенты").order_by("-created_at")
-    return render(request, "main/events.html", {"events_list": event_topics})
 
 
 def login_view(request):
@@ -923,6 +904,25 @@ def dialog_typing(request, dialog_id):
         return JsonResponse({"ok": False}, status=503)
 
 
+
+def family_hq(request):
+    schema_ready = _forum_schema_ready()
+    if not schema_ready:
+        messages.warning(request, "Раздел семьи временно недоступен: примените миграции (python manage.py migrate).")
+        return redirect("home")
+
+    family_ops = FamilyOperation.objects.select_related("coordinator").prefetch_related("participants").order_by("scheduled_for")
+    dossiers = FactionDossier.objects.select_related("author").order_by("-updated_at")
+    family_tasks = FamilyTask.objects.select_related("assignee", "created_by").order_by("status", "due_at", "-created_at")
+
+    return render(request, "main/family_hq.html", {
+        "family_ops": family_ops,
+        "dossiers": dossiers,
+        "family_tasks": family_tasks,
+        "can_manage_family_data": _can_manage_family_data(request.user),
+        "family_members": User.objects.order_by("username"),
+    })
+
 def _can_manage_family_data(user):
     return user.is_authenticated and (user.is_forum_admin or user.family_rank in {"capo", "consigliere", "don"} or user.is_staff)
 
@@ -943,7 +943,7 @@ def create_family_operation(request):
         messages.success(request, "Операция добавлена.")
     else:
         messages.error(request, "Не удалось создать операцию. Проверьте поля формы.")
-    return redirect("home")
+    return redirect("family-hq")
 
 
 @login_required
@@ -961,7 +961,7 @@ def create_faction_dossier(request):
         messages.success(request, "Досье сохранено.")
     else:
         messages.error(request, "Не удалось сохранить досье. Проверьте поля формы.")
-    return redirect("home")
+    return redirect("family-hq")
 
 
 @login_required
@@ -986,7 +986,7 @@ def create_family_task(request):
         messages.success(request, "Поручение создано.")
     else:
         messages.error(request, "Не удалось создать поручение. Проверьте поля формы.")
-    return redirect("home")
+    return redirect("family-hq")
 
 
 @login_required
@@ -994,16 +994,16 @@ def create_family_task(request):
 def claim_family_task(request, task_id):
     if not _forum_schema_ready():
         messages.error(request, "База данных не обновлена. Выполните: python manage.py migrate")
-        return redirect("home")
+        return redirect("family-hq")
 
     task = get_object_or_404(FamilyTask, id=task_id)
     if task.status != FamilyTask.STATUS_OPEN:
         messages.warning(request, "Это поручение уже взято или закрыто.")
-        return redirect("home")
+        return redirect("family-hq")
 
     if task.assignee and task.assignee != request.user and not _can_manage_family_data(request.user):
         messages.error(request, "Поручение уже назначено другому участнику.")
-        return redirect("home")
+        return redirect("family-hq")
 
     task.assignee = request.user
     task.status = FamilyTask.STATUS_IN_PROGRESS
@@ -1018,7 +1018,7 @@ def claim_family_task(request, task_id):
 
     _broadcast_site_event("family_task_updated", {"task_id": task.id, "assignee_id": task.assignee_id})
     messages.success(request, "Вы взяли поручение в работу.")
-    return redirect("home")
+    return redirect("family-hq")
 
 
 @login_required
@@ -1026,7 +1026,7 @@ def claim_family_task(request, task_id):
 def complete_family_task(request, task_id):
     if not _forum_schema_ready():
         messages.error(request, "База данных не обновлена. Выполните: python manage.py migrate")
-        return redirect("home")
+        return redirect("family-hq")
 
     task = get_object_or_404(FamilyTask, id=task_id)
     if task.assignee_id != request.user.id and not _can_manage_family_data(request.user):
@@ -1044,4 +1044,4 @@ def complete_family_task(request, task_id):
 
     _broadcast_site_event("family_task_updated", {"task_id": task.id, "assignee_id": task.assignee_id})
     messages.success(request, "Поручение закрыто.")
-    return redirect("home")
+    return redirect("family-hq")
