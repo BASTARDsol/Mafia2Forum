@@ -59,7 +59,7 @@ def _forum_schema_ready() -> bool:
     try:
         with connection.cursor() as cursor:
             topic_columns = {c.name for c in connection.introspection.get_table_description(cursor, Topic._meta.db_table)}
-            required_topic_columns = {"prefix", "status", "is_pinned"}
+            required_topic_columns = {"prefix", "status", "is_pinned", "is_closed", "closed_at", "auto_close_at"}
             if not required_topic_columns.issubset(topic_columns):
                 return False
 
@@ -69,6 +69,19 @@ def _forum_schema_ready() -> bool:
             return tag_table in tables and topic_tags_table in tables
     except Exception:
         return False
+
+
+def _apply_topic_auto_close():
+    now = timezone.now()
+    Topic.objects.filter(
+        is_closed=False,
+        auto_close_at__isnull=False,
+        auto_close_at__lte=now,
+    ).update(is_closed=True, closed_at=now)
+
+
+def _can_moderate_topic(user, topic: Topic) -> bool:
+    return bool(user.is_authenticated and (user == topic.author or user.is_staff))
 
 
 
@@ -214,11 +227,13 @@ def _build_profile_context(user_obj: User, is_own_profile: bool):
 
 def home(request):
     schema_ready = _forum_schema_ready()
+    if schema_ready:
+        _apply_topic_auto_close()
     topics_qs = Topic.objects.select_related("author", "category")
     if schema_ready:
         topics_qs = topics_qs.prefetch_related("tags", "comments")
     else:
-        topics_qs = topics_qs.defer("prefix", "status", "is_pinned")
+        topics_qs = topics_qs.defer("prefix", "status", "is_pinned", "is_closed", "closed_at", "auto_close_at")
 
     q = (request.GET.get("q") or "").strip()
     category = (request.GET.get("category") or "").strip()
@@ -438,6 +453,7 @@ def topic_detail(request, topic_id):
         messages.error(request, "База данных не обновлена. Выполните: python manage.py migrate")
         return redirect("home")
 
+    _apply_topic_auto_close()
     topic = get_object_or_404(Topic, id=topic_id)
     posts = topic.posts.all().order_by("created_at")
     comments = Comment.objects.filter(topic=topic, post__isnull=True, parent__isnull=True).order_by("created_at")
@@ -470,9 +486,32 @@ def topic_detail(request, topic_id):
     if request.user.is_authenticated:
         is_subscribed = TopicSubscription.objects.filter(topic=topic, user=request.user).exists()
 
+    auto_close_choices = (
+        (0, "Автозакрытие выключено"),
+        (1, "Автозакрытие через 1 день"),
+        (3, "Автозакрытие через 3 дня"),
+        (7, "Автозакрытие через 7 дней"),
+        (14, "Автозакрытие через 14 дней"),
+        (30, "Автозакрытие через 30 дней"),
+    )
+    selected_auto_close_days = 0
+    if topic.auto_close_at:
+        delta = topic.auto_close_at - timezone.now()
+        if delta.total_seconds() > 0:
+            target_days = delta.total_seconds() / 86400
+            available = [days for days, _ in auto_close_choices if days > 0]
+            if available:
+                selected_auto_close_days = min(available, key=lambda d: abs(d - target_days))
+
     if request.method == "POST":
         if not request.user.is_authenticated:
             return redirect("login")
+
+        if topic.is_closed:
+            if request.headers.get("x-requested-with") == "XMLHttpRequest":
+                return JsonResponse({"ok": False, "error": "Тема закрыта"}, status=403)
+            messages.error(request, "Тема закрыта. Публикация новых сообщений недоступна.")
+            return redirect("topic-detail", topic_id=topic.id)
 
         if "submit_post" in request.POST:
             form = PostCreateForm(request.POST, request.FILES)
@@ -573,6 +612,9 @@ def topic_detail(request, topic_id):
         "comment_total": comment_total,
         "is_subscribed": is_subscribed,
         "subscriber_count": topic.subscriptions.count(),
+        "can_moderate": _can_moderate_topic(request.user, topic),
+        "selected_auto_close_days": selected_auto_close_days,
+        "auto_close_choices": auto_close_choices,
     })
 
 
@@ -610,6 +652,9 @@ def notifications_mark_read(request):
 @login_required
 def add_reply(request, post_id):
     post = get_object_or_404(Post, id=post_id)
+    if post.topic.is_closed:
+        messages.error(request, "Тема закрыта. Ответы отключены.")
+        return redirect("topic-detail", topic_id=post.topic.id)
 
     if request.method == "POST":
         content = (request.POST.get("content") or "").strip()
@@ -658,6 +703,65 @@ def topic_delete(request, pk):
     topic.delete()
     messages.success(request, "Тема удалена.")
     return redirect("home")
+
+
+@login_required
+@require_POST
+def toggle_topic_closed(request, topic_id):
+    topic = get_object_or_404(Topic, id=topic_id)
+    if not _can_moderate_topic(request.user, topic):
+        return HttpResponseForbidden("Недостаточно прав.")
+
+    now = timezone.now()
+    if topic.is_closed:
+        topic.is_closed = False
+        topic.closed_at = None
+        if topic.auto_close_at and topic.auto_close_at <= now:
+            topic.auto_close_at = None
+        topic.save(update_fields=["is_closed", "closed_at", "auto_close_at"])
+        _log_activity(request.user, "открыл(а) тему", topic=topic)
+        messages.success(request, "Тема открыта.")
+    else:
+        topic.is_closed = True
+        topic.closed_at = now
+        topic.save(update_fields=["is_closed", "closed_at"])
+        _log_activity(request.user, "закрыл(а) тему", topic=topic)
+        messages.success(request, "Тема закрыта.")
+
+    return redirect("topic-detail", topic_id=topic.id)
+
+
+@login_required
+@require_POST
+def set_topic_auto_close(request, topic_id):
+    topic = get_object_or_404(Topic, id=topic_id)
+    if not _can_moderate_topic(request.user, topic):
+        return HttpResponseForbidden("Недостаточно прав.")
+
+    raw_days = (request.POST.get("auto_close_days") or "").strip()
+    now = timezone.now()
+    if not raw_days or raw_days == "0":
+        topic.auto_close_at = None
+        topic.save(update_fields=["auto_close_at"])
+        messages.success(request, "Автозакрытие выключено.")
+        return redirect("topic-detail", topic_id=topic.id)
+
+    try:
+        days = int(raw_days)
+    except ValueError:
+        messages.error(request, "Неверное значение автозакрытия.")
+        return redirect("topic-detail", topic_id=topic.id)
+
+    if days <= 0:
+        topic.auto_close_at = None
+        topic.save(update_fields=["auto_close_at"])
+        messages.success(request, "Автозакрытие выключено.")
+        return redirect("topic-detail", topic_id=topic.id)
+
+    topic.auto_close_at = now + timezone.timedelta(days=days)
+    topic.save(update_fields=["auto_close_at"])
+    messages.success(request, f"Автозакрытие включено: через {days} дн.")
+    return redirect("topic-detail", topic_id=topic.id)
 
 
 def terms(request):

@@ -78,8 +78,12 @@
                     {% if forum_schema_ready %}
                     <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:6px;">
                       {% if topic.is_pinned %}<span style="font-size:11px; color:#ffdb63; border:1px solid #d4af37; border-radius:999px; padding:2px 8px;">📌 Закреп</span>{% endif %}
+                      {% if topic.is_closed %}<span style="font-size:11px; color:#ff9b9b; border:1px solid #a34a4a; border-radius:999px; padding:2px 8px;">🔒 Закрыта</span>{% endif %}
                       <span style="font-size:11px; border:1px solid #555; border-radius:999px; padding:2px 8px;">{{ topic.get_prefix_display }}</span>
                       <span style="font-size:11px; border:1px solid {% if topic.status == 'solved' %}#2d8f4e{% else %}#777{% endif %}; color:{% if topic.status == 'solved' %}#78e39c{% else %}#ccc{% endif %}; border-radius:999px; padding:2px 8px;">{{ topic.get_status_display }}</span>
+                      {% if topic.auto_close_at %}
+                        <span style="font-size:11px; color:#ffdb63; border:1px solid #6b5f2a; border-radius:999px; padding:2px 8px;">⏳ Автозакрытие {{ topic.auto_close_at|date:"d.m.Y" }}</span>
+                      {% endif %}
                       {% for t in topic.tags.all %}
                         <a href="?tag={{ t.slug }}" style="font-size:11px; color:#d4af37;">#{{ t.name }}</a>
                       {% endfor %}
@@ -147,11 +151,6 @@
     </div>
 </div>
 
-<div class="card" style="margin-top:20px; padding:14px;">
-  <h3 style="margin:0 0 8px 0; color:#d4af37;">🏛️ Штаб семьи</h3>
-  <div style="color:#bdbdbd; margin-bottom:8px;">Операции, досье и поручения перенесены на отдельную страницу.</div>
-  <a href="{% url 'family-hq' %}" class="header-btn btn-compact">Перейти в Штаб семьи</a>
-</div>
 <script>
 (function(){
   const topicsList = document.getElementById('home-topics-list');

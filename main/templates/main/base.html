@@ -128,10 +128,16 @@ footer::before { content: ""; display:block; width:min(1080px,96vw); margin:0 au
                 <tbody>
                     <tr><td><a href="{% url 'home' %}">Главная</a></td></tr>
                     <tr><td><a href="{% url 'news' %}">Новости</a></td></tr>
-                    <tr><td><a href="{% url 'family-hq' %}">Штаб семьи</a></td></tr>
                     <tr><td><span style="color:#888;">Другое</span></td></tr>
                 </tbody>
             </table>
+            <div class="sidebar-card">
+              <h4>🏛️ Штаб семьи</h4>
+              <div style="color:#bdbdbd; font-size:12px; margin-bottom:8px;">
+                Операции, досье и поручения вынесены на отдельную страницу.
+              </div>
+              <a href="{% url 'family-hq' %}" class="header-btn btn-compact">Перейти в Штаб семьи</a>
+            </div>
             {% if sidebar_active_tasks %}
             <div class="sidebar-card">
               <h4>Активные задания</h4>
