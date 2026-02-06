@@ -428,6 +428,8 @@ class FamilyTask(models.Model):
     due_at = models.DateTimeField(null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_OPEN)
     reward_points = models.PositiveIntegerField(default=0)
+    completion_proof = models.ImageField(upload_to="family/tasks/proofs/", null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

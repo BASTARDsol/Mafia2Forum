@@ -7,7 +7,7 @@
 .profile-main { display:flex; gap:20px; flex-wrap:wrap; }
 .profile-avatar-wrap { text-align:center; width:220px; }
 .profile-avatar-lg { width:170px; height:170px; border-radius:50%; border:3px solid #d4af37; object-fit:cover; }
-.profile-name { margin:0; font-size:30px; }
+.profile-name { margin:0; font-size:30px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
 .status-pill { display:inline-block; margin-top:8px; padding:5px 12px; border-radius:999px; font-size:12px; }
 .status-online { background:#1f4d2e; color:#9cf7b8; }
 .status-offline { background:#3d2f1f; color:#e4c47d; }
@@ -19,7 +19,8 @@
 .profile-list-card { background:#19191f; border:1px solid #2f2f36; border-radius:14px; padding:16px; }
 .profile-list-card h3 { margin-top:0; }
 .profile-list { margin:0; padding-left:18px; }
-
+.active-task-grid{display:grid;gap:10px;}
+.active-task{background:#121218;border:1px solid #3a3420;border-radius:10px;padding:10px;}
 .cover-wrap { height: 180px; border-radius: 14px; margin-bottom: 14px; overflow:hidden; border:1px solid #3a3420; }
 .cover-wrap img { width:100%; height:100%; object-fit:cover; }
 @media (max-width: 900px){ .profile-panels { grid-template-columns:1fr; } }
@@ -32,9 +33,9 @@
   <div class="profile-main">
     <div class="profile-avatar-wrap">
       {% if user_obj.profile.avatar %}
-        <img src="{{ user_obj.profile.avatar.url }}" class="profile-avatar-lg" alt="">
+        <img src="{{ user_obj.profile.avatar.url }}" class="profile-avatar-lg rank-{{ user_obj.family_rank }}" alt="">
       {% else %}
-        <img src="{% static user_obj.profile.default_avatar %}" class="profile-avatar-lg" alt="">
+        <img src="{% static user_obj.profile.default_avatar %}" class="profile-avatar-lg rank-{{ user_obj.family_rank }}" alt="">
       {% endif %}
       {% if is_own_profile %}
         <div style="margin-top:14px; display:grid; gap:8px;">
@@ -48,7 +49,7 @@
     </div>
 
     <div style="flex:1; min-width:280px;">
-      <h2 class="profile-name">{{ user_obj.username }}</h2>
+      <h2 class="profile-name">{{ user_obj.username }} <span class="rank-pill">{{ user_obj.get_family_rank_display }}</span></h2>
       <p style="margin:4px 0 0; color:#afafaf;">На форуме с {{ user_obj.date_joined|date:"d M Y" }}</p>
       {% if is_online %}
         <span class="status-pill status-online">● В сети</span>
@@ -90,6 +91,20 @@
   </div>
 </div>
 
+<div class="profile-list-card" style="margin-top:16px;">
+  <h3>Активные задания</h3>
+  <div class="active-task-grid">
+    {% for task in active_tasks %}
+      <div class="active-task">
+        <strong>{{ task.title }}</strong>
+        <div style="font-size:12px; color:#aaa;">Выдал: {{ task.created_by.username }}</div>
+        {% if task.due_at %}<div style="font-size:12px; color:#b89343;">Дедлайн: {{ task.due_at|date:"d.m H:i" }}</div>{% endif %}
+      </div>
+    {% empty %}
+      <div style="color:#999;">Активных задач нет.</div>
+    {% endfor %}
+  </div>
+</div>
 
 <div class="profile-list-card" style="margin-top:16px;">
   <h3>Полученные поручения</h3>

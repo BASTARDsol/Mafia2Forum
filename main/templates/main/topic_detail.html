@@ -9,9 +9,9 @@
 
     <div class="vk-head">
       {% if topic.author.profile.avatar %}
-        <img class="avatar" src="{{ topic.author.profile.avatar.url }}" alt="">
+        <img class="avatar rank-{{ topic.author.family_rank }}" src="{{ topic.author.profile.avatar.url }}" alt="">
       {% else %}
-        <img class="avatar" src="{% static topic.author.profile.default_avatar %}" alt="">
+        <img class="avatar rank-{{ topic.author.family_rank }}" src="{% static topic.author.profile.default_avatar %}" alt="">
       {% endif %}
 
       <div class="vk-head-meta">
@@ -136,9 +136,9 @@
         <div class="post-header">
           <div class="post-user">
             {% if post.author.profile.avatar %}
-              <img class="avatar" src="{{ post.author.profile.avatar.url }}" alt="">
+              <img class="avatar rank-{{ post.author.family_rank }}" src="{{ post.author.profile.avatar.url }}" alt="">
             {% else %}
-              <img class="avatar" src="{% static post.author.profile.default_avatar %}" alt="">
+              <img class="avatar rank-{{ post.author.family_rank }}" src="{% static post.author.profile.default_avatar %}" alt="">
             {% endif %}
 
             <div class="user-info">

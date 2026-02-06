@@ -20,8 +20,16 @@
   <form method="post" enctype="multipart/form-data" id="message-form">
     {% csrf_token %}
     {{ form.content }}
-    {{ form.image }}
-    {{ form.attachment }}
+    <div style="display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
+      <label class="attach-btn" for="id_image">📎 Фото</label>
+      <input class="file-attach-input" id="id_image" name="image" type="file" accept="image/*">
+      <span class="attach-name" id="image-name">Файл не выбран</span>
+    </div>
+    <div style="display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
+      <label class="attach-btn" for="id_attachment">📎 Файл</label>
+      <input class="file-attach-input" id="id_attachment" name="attachment" type="file">
+      <span class="attach-name" id="attachment-name">Файл не выбран</span>
+    </div>
     <button type="submit">Отправить</button>
   </form>
 </div>
@@ -32,6 +40,10 @@
   const typingIndicator = document.getElementById('typing-indicator');
   const contentInput = document.getElementById('id_content');
   const form = document.getElementById('message-form');
+  const imageInput = document.getElementById('id_image');
+  const attachInput = document.getElementById('id_attachment');
+  const imageName = document.getElementById('image-name');
+  const attachmentName = document.getElementById('attachment-name');
   const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
   const ws = new WebSocket(`${wsProtocol}://${window.location.host}{{ ws_url }}`);
   const typingUrl = "{% url 'dialog-typing' dialog.id %}";
@@ -71,41 +83,50 @@
           typingIndicator.textContent = '';
         }
       }, 1800);
-      return;
     }
-    if (payload.type === 'message') {
-      renderMessage(payload);
+    if (payload.type === 'message' && payload.message) {
+      if (!document.querySelector(`.msg[data-id="${payload.message.id}"]`)) {
+        renderMessage(payload.message);
+      }
     }
   };
 
   if (contentInput) {
+    let typingTimer;
     contentInput.addEventListener('input', () => {
-      ws.readyState === 1 && ws.send(JSON.stringify({type:'typing', author:"{{ user.username }}"}));
-      fetch(typingUrl, {
-        method: 'POST',
-        headers: {'X-CSRFToken': getCookie('csrftoken'), 'X-Requested-With': 'XMLHttpRequest'}
-      }).catch(() => {});
+      clearTimeout(typingTimer);
+      typingTimer = setTimeout(() => {
+        fetch(typingUrl, {
+          method: 'POST',
+          headers: { 'X-CSRFToken': getCookie('csrftoken') || '' }
+        }).catch(() => {});
+      }, 250);
     });
   }
+
+  if (imageInput && imageName) imageInput.addEventListener('change', () => { imageName.textContent = imageInput.files[0] ? imageInput.files[0].name : 'Файл не выбран'; });
+  if (attachInput && attachmentName) attachInput.addEventListener('change', () => { attachmentName.textContent = attachInput.files[0] ? attachInput.files[0].name : 'Файл не выбран'; });
 
   if (form) {
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const formData = new FormData(form);
       try {
-        const res = await fetch(window.location.href, {
+        const response = await fetch(window.location.href, {
           method: 'POST',
+          headers: { 'X-Requested-With': 'XMLHttpRequest' },
           body: formData,
-          headers: {'X-Requested-With': 'XMLHttpRequest'}
         });
-        const data = await res.json();
-        if (!res.ok || !data.ok) return;
-        if (ws.readyState === 1) {
-          ws.send(JSON.stringify({type:'message', ...data.message}));
-        } else {
+        const data = await response.json();
+        if (!response.ok || !data.ok) return;
+
+        if (!document.querySelector(`.msg[data-id="${data.message.id}"]`)) {
           renderMessage(data.message);
         }
+        ws.send(JSON.stringify({ type: 'message', message: data.message }));
         form.reset();
+        imageName.textContent = 'Файл не выбран';
+        attachmentName.textContent = 'Файл не выбран';
       } catch (_) {}
     });
   }

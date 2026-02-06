@@ -6,9 +6,9 @@
     <div class="comment-card">
       <div class="comment-header">
         {% if comment.author.profile.avatar %}
-          <img class="avatar" src="{{ comment.author.profile.avatar.url }}" alt="">
+          <img class="avatar rank-{{ comment.author.family_rank }}" src="{{ comment.author.profile.avatar.url }}" alt="">
         {% else %}
-          <img class="avatar" src="{% static comment.author.profile.default_avatar %}" alt="">
+          <img class="avatar rank-{{ comment.author.family_rank }}" src="{% static comment.author.profile.default_avatar %}" alt="">
         {% endif %}
 
         <div class="comment-meta">

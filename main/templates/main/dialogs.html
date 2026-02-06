@@ -7,11 +7,18 @@
   <h3 style="margin-top:0;">Диалоги</h3>
   <div style="display:flex; flex-direction:column; gap:10px;">
     {% for dialog in dialogs %}
-      <a href="{% url 'dialog-detail' dialog.id %}" style="display:block; padding:12px; border-radius:10px; background:#212129; border:1px solid rgba(212,175,55,0.2);">
+      <a href="{% url 'dialog-detail' dialog.id %}" style="display:block; padding:12px; border-radius:10px; background:#212129; border:1px solid rgba(212,175,55,0.2); position:relative;">
         <strong>
           {% for p in dialog.dialog_participants.all %}{% if p.user != user %}{{ p.user.username }}{% endif %}{% endfor %}
         </strong>
         <div style="font-size:12px; color:#9f9f9f; margin-top:4px;">Открыть переписку</div>
+        {% if dialog.unread_count %}
+          <div style="position:absolute; right:12px; top:12px; font-size:12px; color:#ffdb63; display:flex; align-items:center; gap:6px;">
+            <span>🔔</span>
+            <span>{{ dialog.unread_author }}</span>
+            <span class="notify-badge" style="position:static; min-width:16px; height:16px; font-size:10px;">{{ dialog.unread_count }}</span>
+          </div>
+        {% endif %}
       </a>
     {% empty %}
       <div>Диалогов пока нет.</div>
@@ -23,7 +30,7 @@
   <h3 style="margin-top:0;">Начать новый диалог</h3>
   <div style="display:flex; flex-wrap:wrap; gap:8px;">
     {% for u in users_for_new_dialog %}
-      <form method="post" action="{% url 'dialog-start' u.username %}" style="margin:0;">{% csrf_token %}<button type="submit" style="width:auto;">{{ u.username }}</button></form>
+      <form method="post" action="{% url 'dialog-start' u.username %}" style="margin:0;">{% csrf_token %}<button class="header-btn btn-compact" type="submit" style="width:auto;">{{ u.username }}</button></form>
     {% endfor %}
   </div>
 </div>

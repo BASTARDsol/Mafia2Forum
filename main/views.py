@@ -70,6 +70,16 @@ def _forum_schema_ready() -> bool:
     except Exception:
         return False
 
+
+
+def _family_task_proof_ready() -> bool:
+    try:
+        with connection.cursor() as cursor:
+            task_columns = {c.name for c in connection.introspection.get_table_description(cursor, FamilyTask._meta.db_table)}
+            return {"completion_proof", "completed_at"}.issubset(task_columns)
+    except Exception:
+        return False
+
 def _log_activity(actor, verb, topic=None, post=None, comment=None):
     Activity.objects.create(actor=actor, verb=verb, topic=topic, post=post, comment=comment)
 
@@ -172,7 +182,15 @@ def _create_task_notification(*, actor: User, recipient: User, message: str):
 def _build_profile_context(user_obj: User, is_own_profile: bool):
     recent_topics = user_obj.topics.select_related("category").order_by("-created_at")[:5]
     recent_posts = user_obj.posts.select_related("topic").order_by("-created_at")[:5]
-    received_tasks = FamilyTask.objects.select_related("created_by").filter(assignee=user_obj).order_by("status", "due_at", "-created_at")[:10]
+    try:
+        received_tasks = FamilyTask.objects.select_related("created_by").filter(assignee=user_obj).order_by("status", "due_at", "-created_at")[:10]
+        active_tasks = FamilyTask.objects.select_related("created_by").filter(
+            assignee=user_obj,
+            status=FamilyTask.STATUS_IN_PROGRESS,
+        ).order_by("due_at", "-created_at")[:6]
+    except (OperationalError, ProgrammingError):
+        received_tasks = []
+        active_tasks = []
     stats = {
         "topics_count": user_obj.topics.count(),
         "posts_count": user_obj.posts.count(),
@@ -189,6 +207,7 @@ def _build_profile_context(user_obj: User, is_own_profile: bool):
         "recent_topics": recent_topics,
         "recent_posts": recent_posts,
         "received_tasks": received_tasks,
+        "active_tasks": active_tasks,
         "is_online": is_online,
     }
 
@@ -778,6 +797,17 @@ def dialogs_list(request):
         dialogs = []
         dialogs_count = 0
 
+    try:
+        for dialog in dialogs:
+            unread_qs = dialog.messages.exclude(author=request.user).exclude(read_by__user=request.user)
+            last_unread = unread_qs.select_related("author").order_by("-created_at").first()
+            dialog.unread_author = last_unread.author.username if last_unread else ""
+            dialog.unread_count = unread_qs.count() if last_unread else 0
+    except (OperationalError, ProgrammingError):
+        for dialog in dialogs:
+            dialog.unread_author = ""
+            dialog.unread_count = 0
+
     return render(request, "main/dialogs.html", {
         "dialogs": dialogs,
         "dialogs_count": dialogs_count,
@@ -914,6 +944,8 @@ def family_hq(request):
     family_ops = FamilyOperation.objects.select_related("coordinator").prefetch_related("participants").order_by("scheduled_for")
     dossiers = FactionDossier.objects.select_related("author").order_by("-updated_at")
     family_tasks = FamilyTask.objects.select_related("assignee", "created_by").order_by("status", "due_at", "-created_at")
+    if not _family_task_proof_ready():
+        family_tasks = family_tasks.defer("completion_proof", "completed_at")
 
     return render(request, "main/family_hq.html", {
         "family_ops": family_ops,
@@ -1032,8 +1064,22 @@ def complete_family_task(request, task_id):
     if task.assignee_id != request.user.id and not _can_manage_family_data(request.user):
         return HttpResponseForbidden("Закрыть поручение может исполнитель или старший ранг.")
 
+    if not _family_task_proof_ready():
+        messages.error(request, "База данных не обновлена для фото-подтверждений. Выполните: python manage.py migrate")
+        return redirect("family-hq")
+
+    completion_proof = request.FILES.get("completion_proof")
+    if not completion_proof and not task.completion_proof:
+        messages.error(request, "Для закрытия поручения приложите фото/скрин подтверждения.")
+        return redirect("family-hq")
+
     task.status = FamilyTask.STATUS_DONE
-    task.save(update_fields=["status"])
+    task.completed_at = timezone.now()
+    if completion_proof:
+        task.completion_proof = completion_proof
+        task.save(update_fields=["status", "completed_at", "completion_proof"])
+    else:
+        task.save(update_fields=["status", "completed_at"])
 
     if task.created_by_id != request.user.id:
         _create_task_notification(
