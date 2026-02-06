@@ -21,7 +21,19 @@ class CustomUser(AbstractUser):
     )
 
     is_forum_admin = models.BooleanField(default=False)
-    mafia_rank = models.CharField(max_length=20, choices=RANK_CHOICES, default=RANK_SOLDATO)
+
+    @property
+    def mafia_rank(self):
+        if self.is_superuser:
+            return self.RANK_DON
+        group_names = {name.lower() for name in self.groups.values_list("name", flat=True)}
+        if self.RANK_DON in group_names:
+            return self.RANK_DON
+        if self.RANK_CONSIGLIERE in group_names:
+            return self.RANK_CONSIGLIERE
+        if self.RANK_CAPO in group_names:
+            return self.RANK_CAPO
+        return self.RANK_SOLDATO
 
     groups = models.ManyToManyField(
         Group,

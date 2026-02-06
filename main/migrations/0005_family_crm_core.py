@@ -10,11 +10,6 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AddField(
-            model_name='customuser',
-            name='mafia_rank',
-            field=models.CharField(choices=[('soldato', 'Soldato'), ('capo', 'Capo'), ('consigliere', 'Consigliere'), ('don', 'Don')], default='soldato', max_length=20),
-        ),
         migrations.CreateModel(
             name='Operation',
             fields=[
