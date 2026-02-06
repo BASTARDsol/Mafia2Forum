@@ -267,7 +267,7 @@ def home(request):
     topics = page_obj.object_list
 
     last_posts = {t.id: t.posts.order_by("-created_at").first() for t in topics if t.posts.exists()}
-    activities = Activity.objects.select_related("actor", "topic", "post", "comment").order_by("-created_at")[:20]
+    activities = Activity.objects.select_related("actor", "topic", "post", "comment").order_by("-created_at")[:3]
 
 
     return render(request, "main/home.html", {
